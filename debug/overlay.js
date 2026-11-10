@@ -60,7 +60,7 @@ export function overlayAktualisieren(el, spiel, dtMs) {
     k ? `Lage      ${alsMeter(k.x).toFixed(1)} / ${alsMeter(k.y).toFixed(1)} m   ${((k.h / 65536) * 360).toFixed(1)}°` : 'kein Koloss',
     k ? `Tempo     längs ${alsKmh(laengsTempo(k)).toFixed(2)}  quer ${alsKmh(querTempo(k)).toFixed(2)} km/h` : '',
     k ? `Eingabe   Gas ${k.gas}  Lenkung ${k.lenkung}  Drehung ${k.dreh}` : '',
-    k ? `Boden     ${UNTERGRUND[untergrundAn(k.x, k.y)].name}` : '',
+    k ? `Boden     ${UNTERGRUND[untergrundAn(s.seed, k.x, k.y)].name}` : '',
     `Kamera    ${kamera.zoom.toFixed(2)} px/m  ${kamera.folgen ? 'folgt' : 'frei'}`,
     `Optik     ${o.spurpunkte} Spurpunkte, ${o.russ} Ruß, ${o.teilchen} Teilchen`,
     `Wind      ${(s.wetter.windStaerke / 10).toFixed(1)} m/s → ${((s.wetter.windRichtung / 65536) * 360).toFixed(0)}°  (Ziel ${((s.wetter.zielRichtung / 65536) * 360).toFixed(0)}°, Wechsel bei Tick ${s.wetter.naechsterWechsel})`,

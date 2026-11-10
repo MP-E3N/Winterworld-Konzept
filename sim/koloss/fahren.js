@@ -5,7 +5,7 @@
  * ZWECK:    Aus Gas, Lenkung, Kesseldruck und Untergrund das neue Tempo, die neue Richtung und
  *           die neue Position berechnen. Schwer und träge: langsames Anfahren, langer Bremsweg,
  *           auf Eis rutscht der Koloss seitlich weg.
- * LIEST:    k.gas, k.lenkung, k.druck, k.tempomat, Untergrund an der Position, data/koloss.js
+ * LIEST:    k.gas, k.lenkung, k.druck, k.tempomat, Untergrund an der Position (Seed), data/koloss.js
  * SCHREIBT: k.x, k.y, k.vx, k.vy, k.h, k.dreh, k.antrieb
  * REGEL:    KONZEPT.md §3 „Fahrgefühl“, CLAUDE.md Regeln 2+3 (nur Ganzzahlen)
  * DEBUG:    F3 zeigt Längs-/Quertempo und Untergrund. Zum Nachstellen: `ek.step(n)` und
@@ -27,6 +27,7 @@ import {
 } from '../../data/koloss.js';
 import { UNTERGRUND } from '../../data/untergrund.js';
 import { untergrundAn } from '../welt/untergrund.js';
+import { bewegenMitKollision } from './kollision.js';
 import { cosW, sinW, teile, winkelNorm, klemme, TRIG_EINS } from '../lib/winkel.js';
 
 /** @typedef {import('../types.js').Koloss} Koloss */
@@ -34,9 +35,10 @@ import { cosW, sinW, teile, winkelNorm, klemme, TRIG_EINS } from '../lib/winkel.
 /**
  * Ein Tick Fahrphysik für einen Koloss.
  * @param {Koloss} k
+ * @param {number} seed  Welt-Seed (für Untergrund und Kollision)
  */
-export function fahrSchritt(k) {
-  const u = UNTERGRUND[untergrundAn(k.x, k.y)];
+export function fahrSchritt(k, seed) {
+  const u = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
   const c = cosW(k.h);
   const s = sinW(k.h);
 
@@ -63,7 +65,7 @@ export function fahrSchritt(k) {
   k.dreh += drehSchritt(ziel - k.dreh);
   // Im Stand kann sich ein Radfahrzeug nicht drehen — egal, was von vorher übrig ist.
   if (laengs === 0) k.dreh = 0;
-  k.h = winkelNorm(k.h + k.dreh);
+  const neuH = winkelNorm(k.h + k.dreh);
 
   // ── 5. Zurück in Weltrichtung (mit der ALTEN Richtung) und bewegen ──
   // WARUM alte Richtung: Das Tempo dreht NICHT automatisch mit. Im nächsten Tick zeigt die
@@ -73,8 +75,8 @@ export function fahrSchritt(k) {
   k.vx = teile(laengs * c - quer * s, TRIG_EINS);
   k.vy = teile(laengs * s + quer * c, TRIG_EINS);
 
-  k.x += k.vx;
-  k.y += k.vy;
+  // ── 6. Bewegen — aber nicht in Fels oder Schlucht hinein (sim/koloss/kollision.js) ──
+  bewegenMitKollision(k, seed, neuH);
 }
 
 /**

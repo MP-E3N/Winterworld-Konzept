@@ -47,7 +47,7 @@ export function bildZeichnen(ctx, spiel, dtMs) {
   schneetreibenAktualisieren(s.wetter, optikDt);
 
   ctx.clearRect(0, 0, kamera.breite, kamera.hoehe);
-  bodenZeichnen(ctx);
+  bodenZeichnen(ctx, s.seed);
   russZeichnen(ctx);
   spurenZeichnen(ctx);
   schneetreibenZeichnen(ctx);

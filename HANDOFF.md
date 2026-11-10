@@ -6,7 +6,31 @@
 3. Spielen: Vorschau „eiskoloss“ (Port 5176) bzw. `Projekte\serve.ps1 -Port 5176 -Root Eiskoloss`.
    Steuerung hinter dem „?“ oben rechts. Konsole: `ek.…` (siehe `debug/konsole.js`).
 
-## Stand 2026-11-10: M0 + M1 gebaut (noch NICHT committet)
+## Stand 2026-11-10: M0 + M1 committet (2ae5d9c), M2 Welt gebaut (noch NICHT committet)
+
+### M2 Welt (Spec: docs/specs/M2-welt.md, E-009)
+- **Generator** `sim/welt/generator.js` mit Ganzzahl-Rauschen (`sim/welt/rauschen.js`): Fels (Berge),
+  Schluchten mit Furten, Seen (Rand dünnes Eis, Mitte dickes Eis), Pulverschnee-Wehen und Bergfuß.
+  Startbereich frei (weicher Übergang, kein Kreis), nach außen (bis 5 km) mehr Fels und Eis.
+  **Ebenen** (sehr grobes Rauschen): weite Flächen ohne Schluchten und fast ohne Fels.
+  Werte in `data/welt.js`. **Einheit: Feinpunkte zu 25 cm** — Bild und Kollision fragen
+  dieselbe Funktion `gelaendeAn(seed, fx, fy)`, deshalb keine Treppen und kein Versatz.
+- `untergrundAn(seed, x, y)` / `befahrbarAn()` (µm) sind die einzige Abfrage der Physik; kein
+  Zwischenspeicher nötig (~20 Abfragen pro Tick und Koloss, je ~1 µs).
+- **Kollision** `sim/koloss/kollision.js`: Prüfpunkte rund um den Rumpf; frei → übernehmen, sonst
+  ohne Drehung, sonst an der Wand entlang, sonst stehen bleiben. Noch kein Schaden (M4).
+- **Seed 0 = Testgelände** (Kreise aus M1 + dünner Seerand + Felsblock im Süden), Standard in Tests;
+  Spiel startet mit Seed 4711 (`ek.neu(0)` fürs Testgelände).
+- **Darstellung** `render/welt.js`: Kacheln 64 × 64 in 7 Stufen (0,25 m … 64 m je Bildpunkt, je nach
+  Zoom), Kantenglättung an Geländegrenzen, weich skaliert, Hangschattierung auf Fels, zufällige
+  Körnung, 6 ms Budget pro Bild.
+- **Werkzeug** `node tools/welt-ansehen.js <seed> [meter]` zeigt die Welt als Text-Karte.
+- **Tests:** 55 grün (neu: Rauschen, Physik-Abfrage = Generator, Start frei, Anteile und
+  Erreichbarkeit ≥ 90 % in 600 m über 20 Seeds, 4 Kollisionstests). Replay auf Seed 0 neu aufgenommen.
+- **Spieltest M2 umgesetzt:** Treppen/Pixel weg (25-cm-Raster + Kantenglättung), größere freie
+  Flächen (größere Formen, Ebenen, weniger Schluchten).
+
+### M0 + M1
 - **M0 Gerüst:** Ordner nach KONZEPT.md §9, git (main), TypeScript-Prüfung, Test-Rahmen und
   Regel-Prüfer aus Kronwege übernommen und angepasst, Vorschau-Eintrag, F3-Overlay, `ek`-Konsole.
 - **Simulation:** Zustand v1 (`spieler[]`, `kolosse[]`), Befehle `BEITRETEN`/`STEUERN`/`DRUCK`,
@@ -74,11 +98,11 @@ Kurvenradius ~15–80 m (Drehen max. 10°/s). Pulverschnee ≈ halbes Tempo; dic
 schlechte Bremsen, rutscht stark.
 
 ## Offen / nächster Schritt
-1. **Spieltest durch den Nutzer: Fühlt sich das Fahren gut an?** (KONZEPT.md §10: wichtigster
-   Testpunkt). Mögliche Stellschrauben: Anfahrzeit (`WIDERSTAND_BEZUG`), Lenkung (`DREH_MAX`,
+1. Fahrgefühl: Stellschrauben Anfahrzeit (`WIDERSTAND_BEZUG`), Lenkung (`DREH_MAX`,
    `DREH_ANPASSUNG`), Eis-Rutschen (`haftung`).
-2. Commit nach Freigabe.
+2. Commit von M2 nach Freigabe.
 2b. Wind wirkt erst später aufs Fahren (Nutzerentscheidung, nicht wieder vorschlagen).
-3. Danach **M2 Welt**: Seed-Generator mit Chunks, Berge/Schluchten (Kollision), dünnes Eis,
-   Chunk-Bilder in Detailstufen. Spec zuerst.
+3. **Nächster Schritt M3 Fundstellen & Bergen** (Sicht/Nebel, Klick → Bergen, Laderaum/Gewicht).
+   Vorher: Spieltest der Welt durch den Nutzer.
+3b. Repository „Winterworld Konzept“ wurde vom Nutzer angelegt — Adresse fehlt noch, dann pushen.
 4. Offene Konzeptfragen: F5 Name, F6 Liegenbleiben, F7 Konkurrenz-Regeln (KONZEPT.md §11).

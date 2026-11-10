@@ -58,6 +58,10 @@ Datei < 300 Zeilen (harte Grenze 400), Funktion < 50 Zeilen. Erst suchen, dann s
 - Neue Erkenntnis oder wiederholter Fehler → eine Regel unter „Gelernte Regeln“ ergänzen.
 
 ## Gelernte Regeln
+- **Nie Text mit Backticks in `node -e "…"` (doppelte Anführungszeichen) in Git-Bash.** Die Shell
+  führt `` `datei.js` `` als Befehl aus (M2: sie versuchte, JS-Dateien und /LICENSE.txt als Skripte
+  zu starten; im HANDOFF fehlten danach alle Code-Namen). Für Markdown/Code mit Backticks immer das
+  Edit-/Write-Werkzeug nehmen oder ein Skript als Datei schreiben.
 - **Versteckte Vorschau:** Ist das Browser-Fenster versteckt, läuft `requestAnimationFrame` kaum
   oder gar nicht. Dann `ek.step(n)` nutzen, Tasten-Befehle mit
   `(await import('/eingabe/tastatur.js')).steuerungSenden(ek.spiel)` auslösen und

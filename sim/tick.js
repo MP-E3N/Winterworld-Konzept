@@ -23,6 +23,6 @@ export function tickAusfuehren(state) {
   windSchritt(state);
   // 2. Kolosse in ID-Reihenfolge. WARUM wichtig: Ab M2 können sie sich berühren; dann muss jeder
   //    Rechner sie in derselben Reihenfolge bewegen.
-  for (const k of state.kolosse) fahrSchritt(k);
+  for (const k of state.kolosse) fahrSchritt(k, state.seed);
   state.tick += 1;
 }

@@ -7,7 +7,8 @@
  *             ek.step(n)        n Ticks ausführen (auch bei Pause; gut bei versteckter Vorschau)
  *             ek.hash()         Prüfsumme des Zustands
  *             ek.untergrund()   Untergrund unter dem eigenen Koloss
- *             ek.neu(seed)      neue Welt
+ *             ek.neu(seed)      neue Welt (0 = Testgelände)
+ *             ek.kacheln()      Gelände-Kacheln der Darstellung
  *             ek.replay()       Protokoll dieser Fahrt als JSON (für Fehlerberichte)
  *             ek.kamera, ek.spiel, ek.verbindung, ek.optik()
  * LIEST:    das Spiel
@@ -21,6 +22,7 @@ import { untergrundAn } from '../sim/welt/untergrund.js';
 import { UNTERGRUND } from '../data/untergrund.js';
 import { kamera } from '../render/kamera.js';
 import { optikZahlen } from '../render/spuren.js';
+import { kachelZahlen } from '../render/welt.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -40,7 +42,7 @@ export function konsoleEinrichten(spielHolen, neueWelt) {
     untergrund() {
       const v = spielHolen().verbindung;
       const k = kolossVon(v.zustand(), v.spieler);
-      return k ? UNTERGRUND[untergrundAn(k.x, k.y)].name : '–';
+      return k ? UNTERGRUND[untergrundAn(v.zustand().seed, k.x, k.y)].name : '–';
     },
     /** @param {number} [seed] */
     neu(seed = Date.now() % 100000) { neueWelt(seed); return seed; },
@@ -50,6 +52,7 @@ export function konsoleEinrichten(spielHolen, neueWelt) {
       return JSON.stringify({ seed: s.seed, ticks: s.tick, hash: zustandsHash(s), protokoll: v.protokoll() });
     },
     optik: optikZahlen,
+    kacheln: kachelZahlen,
   };
   /** @type {any} */ (window).ek = ek;
 }

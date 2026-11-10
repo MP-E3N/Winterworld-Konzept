@@ -34,5 +34,6 @@ export function testProtokoll() {
   bei(1100, steuern(-100, 0));  // bremsen, dann rückwärts
   bei(1400, steuern(-100, -100)); // rückwärts mit Lenkung
   bei(1550, steuern(0, 0));     // ausrollen
-  return { seed: 42, ticks: 1800, protokoll };
+  // Seed 0 = Testgelände: Der See liegt garantiert geradeaus im Norden.
+  return { seed: 0, ticks: 1800, protokoll };
 }

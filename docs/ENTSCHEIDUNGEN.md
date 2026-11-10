@@ -39,6 +39,14 @@ Rauch, Dampf, Ruß, Schlacke, Spuren und Schneetreiben sind reine Optik in `rend
 Zufall, gehen beim Neustart verloren). Soll Ruß einmal Spielwirkung haben (z. B. Spuren lesen,
 andere Kolosse verfolgen), muss er in den Zustand umziehen.
 
+## E-009 Welt = Seed, Zellen nie im Zustand; Seed 0 = Testgelände (2026-11-10, M2)
+Jede Zelle wird bei Bedarf aus Seed und Koordinaten berechnet (`sim/welt/generator.js`) und in
+einem Chunk-Speicher gehalten, der kein Spielzustand ist. Nur Ganzzahl-Rauschen, weil Fels und
+Schlucht Spielregeln sind (Kollision) und auf allen Rechnern gleich sein müssen. Spätere
+Änderungen an der Welt (gebrochenes Eis, geplünderte Fundstellen) kommen als Änderungsliste in den
+Zustand (KONZEPT.md §8 Regel 7). Seed 0 bleibt das feste Testgelände für Tests und Fahrgefühl.
+Darstellung in eigenen Kacheln (3 Detailstufen) mit Zeitbudget pro Bild.
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige

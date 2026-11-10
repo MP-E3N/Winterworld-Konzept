@@ -1,20 +1,18 @@
 // @ts-check
 /**
- * boden.js — Zeichnet Schnee, Testflächen (Eis, Pulverschnee) und das Orientierungsraster.
+ * boden.js — Zeichnet den Boden: Gelände (render/welt.js), Schneekörnung und Orientierungsraster.
  *
- * ZWECK:    Auf einer leeren Schneefläche sieht man sonst nicht, dass man fährt. Schneekörnung
- *           (nah), Raster (alle Zoomstufen) und Flächen geben Halt fürs Auge.
- * LIEST:    Kamera, data/testgelaende.js, data/untergrund.js
+ * ZWECK:    Gelände-Kacheln als Grundlage; darüber feine Schneekörnung (nah) und das Raster (alle
+ *           Zoomstufen), damit das Auge auch auf großen Schneeflächen Halt findet.
+ * LIEST:    Kamera, render/welt.js, data/untergrund.js
  * SCHREIBT: nur das Canvas
  * REGEL:    KONZEPT.md §6
  * DEBUG:    Raster stört? RASTER_M in data/ansicht.js. Körnung flimmert? KOERNUNG_* unten.
- *
- * M2: Die Testflächen werden durch vorgezeichnete Chunk-Bilder in mehreren Detailstufen ersetzt.
  */
 
 import { kamera, weltZuBild } from './kamera.js';
-import { TESTFLAECHEN } from '../data/testgelaende.js';
-import { UNTERGRUND, EIS_DICK, PACKSCHNEE } from '../data/untergrund.js';
+import { weltZeichnen } from './welt.js';
+import { UNTERGRUND, PACKSCHNEE } from '../data/untergrund.js';
 import { RASTER_M } from '../data/ansicht.js';
 
 /** Körnungs-Kachel: so viele Meter Welt … */
@@ -24,17 +22,17 @@ const KOERNUNG_PX = 512;
 
 /** @type {CanvasPattern | null} */
 let koernung = null;
-/** Vorgezeichnete Risse je Eisfläche (Index wie TESTFLAECHEN). @type {number[][][]} */
-const risse = TESTFLAECHEN.map((f, i) => rissLinien(f.r, 1000 + i));
 
 /**
  * @param {CanvasRenderingContext2D} ctx
+ * @param {number} seed
  */
-export function bodenZeichnen(ctx) {
-  ctx.fillStyle = UNTERGRUND[PACKSCHNEE].farbe;
+export function bodenZeichnen(ctx, seed) {
+  const [r, g, b] = UNTERGRUND[PACKSCHNEE].farbe;
+  ctx.fillStyle = `rgb(${r}, ${g}, ${b})`; // Grund, solange Kacheln noch berechnet werden
   ctx.fillRect(0, 0, kamera.breite, kamera.hoehe);
+  weltZeichnen(ctx, seed);
   koernungZeichnen(ctx);
-  TESTFLAECHEN.forEach((f, i) => flaecheZeichnen(ctx, f, risse[i]));
   rasterZeichnen(ctx);
 }
 
@@ -89,76 +87,6 @@ function koernungErzeugen(ctx) {
     g.fillRect(zufall() * KOERNUNG_PX, zufall() * KOERNUNG_PX, r, r);
   }
   return ctx.createPattern(c, 'repeat');
-}
-
-// ── Flächen ───────────────────────────────────────────────
-
-/**
- * @param {CanvasRenderingContext2D} ctx
- * @param {{untergrund: number, x: number, y: number, r: number}} f
- * @param {number[][]} rissListe
- */
-function flaecheZeichnen(ctx, f, rissListe) {
-  const [bx, by] = weltZuBild(f.x, f.y);
-  const r = f.r * kamera.zoom;
-  if (bx + r < 0 || by + r < 0 || bx - r > kamera.breite || by - r > kamera.hoehe) return;
-  if (f.untergrund === EIS_DICK) {
-    const verlauf = ctx.createRadialGradient(bx, by, r * 0.1, bx, by, r);
-    verlauf.addColorStop(0, '#a9c9da');
-    verlauf.addColorStop(0.85, UNTERGRUND[EIS_DICK].farbe);
-    verlauf.addColorStop(1, '#d6e6ee');
-    ctx.fillStyle = verlauf;
-    ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
-    // Risse erst ab mittlerem Zoom — weit weg wären sie nur Gekritzel.
-    if (kamera.zoom > 0.6) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
-      ctx.lineWidth = Math.max(1, kamera.zoom * 0.15);
-      for (const linie of rissListe) {
-        ctx.beginPath();
-        for (let i = 0; i < linie.length; i += 2) {
-          const px = bx + linie[i] * kamera.zoom, py = by + linie[i + 1] * kamera.zoom;
-          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-        }
-        ctx.stroke();
-      }
-    }
-  } else {
-    // Pulverschnee: heller, mit weichem Rand (Wehe).
-    const verlauf = ctx.createRadialGradient(bx, by, r * 0.5, bx, by, r * 1.08);
-    verlauf.addColorStop(0, UNTERGRUND[f.untergrund].farbe);
-    verlauf.addColorStop(0.9, UNTERGRUND[f.untergrund].farbe);
-    verlauf.addColorStop(1, 'rgba(247, 249, 251, 0)');
-    ctx.fillStyle = verlauf;
-    ctx.beginPath(); ctx.arc(bx, by, r * 1.08, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-/**
- * Zufällige Risslinien innerhalb eines Kreises (Meter relativ zur Mitte).
- * @param {number} radius
- * @param {number} saat
- * @returns {number[][]}  je Linie [x0, y0, x1, y1, …]
- */
-function rissLinien(radius, saat) {
-  const zufall = optikZufall(saat);
-  /** @type {number[][]} */
-  const linien = [];
-  const anzahl = Math.round(radius / 6);
-  for (let i = 0; i < anzahl; i++) {
-    const w = zufall() * Math.PI * 2, d = Math.sqrt(zufall()) * radius * 0.9;
-    let x = Math.cos(w) * d, y = Math.sin(w) * d, richtung = zufall() * Math.PI * 2;
-    const linie = [x, y];
-    const glieder = 3 + Math.floor(zufall() * 5);
-    for (let j = 0; j < glieder; j++) {
-      richtung += (zufall() - 0.5) * 1.2;
-      x += Math.cos(richtung) * (4 + zufall() * 10);
-      y += Math.sin(richtung) * (4 + zufall() * 10);
-      if (x * x + y * y > radius * radius * 0.95) break;
-      linie.push(x, y);
-    }
-    linien.push(linie);
-  }
-  return linien;
 }
 
 // ── Raster ────────────────────────────────────────────────

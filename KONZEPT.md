@@ -1,6 +1,6 @@
 # Eiskoloss — Konzept & Bauplan (Arbeitstitel)
 
-Stand: 2026-11-10 · Status: **M0 + M1 gebaut** (Fahren auf Testgelände), siehe HANDOFF.md
+Stand: 2026-11-10 · Status: **M0–M2 gebaut** (Fahren, Welt aus dem Seed), siehe HANDOFF.md
 
 > Ein gepanzerter Dampfkoloss zieht durch eine erfrorene Welt. Jede Schaufel Kohle
 > ist Wärme, Tempo und Zeit. Jeder Überlebende, den du aufnimmst, ist eine Hand

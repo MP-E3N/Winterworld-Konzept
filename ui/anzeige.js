@@ -70,7 +70,7 @@ export function anzeigeAktualisieren(spiel, dtMs) {
     el['a-tempo'].textContent = Math.abs(alsKmh(laengsTempo(k))).toFixed(0);
     el['a-druck'].textContent = DRUCKSTUFEN[k.druck].name;
     tempoHaltenAnzeigen(s, v.spieler, k);
-    el['a-boden'].textContent = UNTERGRUND[untergrundAn(k.x, k.y)].name;
+    el['a-boden'].textContent = UNTERGRUND[untergrundAn(s.seed, k.x, k.y)].name;
     const wind = windVektor(s.wetter);
     // Pfeil zeigt, wohin der Wind weht (Norden = oben, wie auf der Karte).
     el['a-windpfeil'].style.transform = `rotate(${wind.rad}rad)`;
@@ -78,7 +78,7 @@ export function anzeigeAktualisieren(spiel, dtMs) {
     dampfmaschineZeichnen(maschine, {
       druck: k.druck, druckMax: DRUCKSTUFEN.length - 1, gas: k.antrieb / EINGABE_MAX,
       // Überlast: „Tempo halten“ will schneller, als der Kessel auf diesem Boden schafft.
-      ueberlast: k.tempomat > 0 && k.gas === 0 && k.tempomat > hoechstTempo(k),
+      ueberlast: k.tempomat > 0 && k.gas === 0 && k.tempomat > hoechstTempo(s.seed, k),
       weg: wegVon(k.id), dtMs: v.pausiert() ? 0 : dtMs,
     });
   }

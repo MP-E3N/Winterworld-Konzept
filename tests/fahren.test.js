@@ -178,7 +178,7 @@ test('Abfrage hoechstTempo stimmt mit dem gemessenen Höchsttempo überein (Übe
     const { state, k } = testwelt();
     setzeAn(k, 0, 2000, OSTEN);
     fahre(state, { gas: 100, druck: stufe }, 80 * SEK);
-    const gemessen = alsKmh(laengsTempo(k)), berechnet = alsKmh(hoechstTempo(k));
+    const gemessen = alsKmh(laengsTempo(k)), berechnet = alsKmh(hoechstTempo(state.seed, k));
     pruefe(Math.abs(gemessen - berechnet) < 0.5, `Stufe ${stufe}: gemessen ${gemessen.toFixed(2)}, berechnet ${berechnet.toFixed(2)}`);
   }
 });

@@ -1,36 +1,38 @@
 // @ts-check
 /**
- * untergrund.js — Welcher Untergrund liegt an einer Stelle?
+ * untergrund.js — Welcher Untergrund liegt an einer Stelle? Ist sie befahrbar?
  *
- * ZWECK:    Die einzige Frage, die die Fahrphysik an die Welt stellt. In M1 antworten feste
- *           Testflächen (data/testgelaende.js), ab M2 der Seed-Generator — die Schnittstelle
- *           `untergrundAn(x, y)` bleibt dabei gleich.
- * LIEST:    data/testgelaende.js
+ * ZWECK:    Die einzigen Fragen, die Physik und Anzeige an die Welt stellen. Dahinter steckt der
+ *           Generator (sim/welt/generator.js) auf 25 cm genau; Seed 0 = Testgelände.
+ * LIEST:    sim/welt/generator.js, data/untergrund.js
  * SCHREIBT: —
- * REGEL:    KONZEPT.md §5
+ * REGEL:    KONZEPT.md §5, docs/specs/M2-welt.md
  * DEBUG:    `ek.untergrund()` zeigt den Untergrund unter dem eigenen Koloss.
+ *
+ * WARUM ohne Zwischenspeicher: Pro Tick und Koloss sind es gut zwanzig Abfragen (Kollision), jede
+ * kostet ~1 µs. Ein Speicher lohnt erst, wenn viele Kolosse oder KI-Wegsuche dazukommen.
  */
 
-import { TESTFLAECHEN } from '../../data/testgelaende.js';
-import { PACKSCHNEE } from '../../data/untergrund.js';
-import { teile } from '../lib/winkel.js';
+import { gelaendeAn } from './generator.js';
+import { UNTERGRUND } from '../../data/untergrund.js';
+import { FEIN_UM } from '../../data/welt.js';
 
 /**
+ * @param {number} seed
  * @param {number} x  µm
  * @param {number} y  µm
  * @returns {number}  Untergrund-ID (Index in data/untergrund.js UNTERGRUND)
  */
-export function untergrundAn(x, y) {
-  // In Millimeter rechnen: Quadrate bleiben bis ~90 km Abstand unter 2^53 (exakt).
-  // GRENZE: Für M1 reicht das; der M2-Generator fragt Chunk-Zellen statt Kreise ab.
-  const xmm = teile(x, 1000);
-  const ymm = teile(y, 1000);
-  let ergebnis = PACKSCHNEE;
-  for (const f of TESTFLAECHEN) {
-    const dx = xmm - f.x * 1000;
-    const dy = ymm - f.y * 1000;
-    const r = f.r * 1000;
-    if (dx * dx + dy * dy <= r * r) ergebnis = f.untergrund; // spätere Fläche gewinnt
-  }
-  return ergebnis;
+export function untergrundAn(seed, x, y) {
+  return Math.floor(gelaendeAn(seed, Math.floor(x / FEIN_UM), Math.floor(y / FEIN_UM)) / 65536);
+}
+
+/**
+ * @param {number} seed
+ * @param {number} x  µm
+ * @param {number} y  µm
+ * @returns {boolean}
+ */
+export function befahrbarAn(seed, x, y) {
+  return UNTERGRUND[untergrundAn(seed, x, y)].befahrbar;
 }

@@ -47,7 +47,7 @@ test('Determinismus: Speichern/Laden mitten in der Fahrt ändert den Verlauf nic
 
 test('Determinismus: lokale Verbindung zeichnet ein Protokoll auf, das sich exakt nachspielen lässt', () => {
   const { protokoll } = testProtokoll();
-  const v = lokaleVerbindungErstellen(42, 'Test');
+  const v = lokaleVerbindungErstellen(0, 'Test');
   let i = 0;
   for (let t = 0; t < 600; t++) {
     // Das BEITRETEN aus dem Testprotokoll überspringen — das schickt die Verbindung selbst.
@@ -57,7 +57,7 @@ test('Determinismus: lokale Verbindung zeichnet ein Protokoll auf, das sich exak
     }
     v.schritt();
   }
-  const nach = replayAbspielen(42, v.protokoll(), 600);
+  const nach = replayAbspielen(0, v.protokoll(), 600);
   gleich(zustandsHash(nach), zustandsHash(v.zustand()), 'Hash Verbindung vs. Replay');
 });
 

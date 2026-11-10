@@ -16,11 +16,12 @@ import { UM_PRO_METER } from '../data/koloss.js';
 /** @typedef {import('../sim/types.js').Koloss} Koloss */
 
 /**
- * Neue Welt mit einem beigetretenen Spieler 0.
- * @param {number} [seed=1]
+ * Neue Welt mit einem beigetretenen Spieler 0. Standard: Seed 0 = festes Testgelände
+ * (data/testgelaende.js), damit Fahrtests nicht vom Generator abhängen.
+ * @param {number} [seed=0]
  * @returns {{state: Zustand, k: Koloss}}
  */
-export function testwelt(seed = 1) {
+export function testwelt(seed = 0) {
   const state = neuerZustand(seed);
   const erg = befehlAnwenden(state, { art: 'BEITRETEN', spieler: 0, name: 'Test' });
   if (!erg.ok) throw new Error(erg.grund);

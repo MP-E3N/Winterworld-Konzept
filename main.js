@@ -15,13 +15,14 @@ import { kamera, kameraEinrichten } from './render/kamera.js';
 import { bildZeichnen } from './render/zeichnen.js';
 import { optikZuruecksetzen } from './render/spuren.js';
 import { schneetreibenZuruecksetzen } from './render/wind.js';
+import { weltZuruecksetzen } from './render/welt.js';
 import { tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, tempoHaltenUmschalten, zieltempoSetzen } from './eingabe/tastatur.js';
 import { anzeigeAufbauen, anzeigeAktualisieren } from './ui/anzeige.js';
 import { overlayEinrichten, overlayAktualisieren } from './debug/overlay.js';
 import { konsoleEinrichten } from './debug/konsole.js';
 import { ZOOM_START } from './data/ansicht.js';
 
-/** Seed der ersten Welt. In M1 egal (Testgelände), ab M2 bestimmt er die Karte. */
+/** Seed der ersten Welt (bestimmt die ganze Karte). 0 = Testgelände aus M1: ek.neu(0). */
 const START_SEED = 4711;
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('welt'));
@@ -41,6 +42,7 @@ function neueWelt(seed) {
   spiel = spielErstellen(lokaleVerbindungErstellen(seed, 'Eiskoloss'));
   optikZuruecksetzen();
   schneetreibenZuruecksetzen();
+  weltZuruecksetzen();
   tastaturZuruecksetzen();
   kamera.folgen = true;
   kamera.zoomZiel = ZOOM_START;

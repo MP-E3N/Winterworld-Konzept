@@ -67,10 +67,11 @@ export function alsMeter(um) {
  * Höchsttempo, das der Kessel auf der aktuellen Druckstufe und dem Boden unter dem Koloss mit
  * Vollgas erreicht (µm/Tick). Gleichgewicht Schub = Widerstand (siehe sim/koloss/fahren.js).
  * Für die Anzeige: Will „Tempo halten“ mehr, ist der Kessel überlastet.
+ * @param {number} seed  Welt-Seed
  * @param {Koloss} k
  * @returns {number}
  */
-export function hoechstTempo(k) {
-  const u = UNTERGRUND[untergrundAn(k.x, k.y)];
+export function hoechstTempo(seed, k) {
+  const u = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
   return teile(SCHUB[k.druck] * u.zug * 4096, u.widerstand * 100);
 }
