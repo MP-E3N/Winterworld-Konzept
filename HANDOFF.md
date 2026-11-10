@@ -6,7 +6,7 @@
 3. Spielen: Vorschau „eiskoloss“ (Port 5176) bzw. `Projekte\serve.ps1 -Port 5176 -Root Eiskoloss`.
    Steuerung hinter dem „?“ oben rechts. Konsole: `ek.…` (siehe `debug/konsole.js`).
 
-## Stand 2026-11-10: M0 + M1 committet (2ae5d9c), M2 Welt gebaut (noch NICHT committet)
+## Stand 2026-11-10: M0 + M1 committet (2ae5d9c), M2 Welt committet (2924611)
 
 ### M2 Welt (Spec: docs/specs/M2-welt.md, E-009)
 - **Generator** `sim/welt/generator.js` mit Ganzzahl-Rauschen (`sim/welt/rauschen.js`): Fels (Berge),
@@ -100,7 +100,7 @@ schlechte Bremsen, rutscht stark.
 ## Offen / nächster Schritt
 1. Fahrgefühl: Stellschrauben Anfahrzeit (`WIDERSTAND_BEZUG`), Lenkung (`DREH_MAX`,
    `DREH_ANPASSUNG`), Eis-Rutschen (`haftung`).
-2. Commit von M2 nach Freigabe.
+2. M2 committet (2924611).
 2b. Wind wirkt erst später aufs Fahren (Nutzerentscheidung, nicht wieder vorschlagen).
 3. **Nächster Schritt M3 Fundstellen & Bergen** (Sicht/Nebel, Klick → Bergen, Laderaum/Gewicht).
    Vorher: Spieltest der Welt durch den Nutzer.
