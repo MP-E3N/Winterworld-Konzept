@@ -1,0 +1,135 @@
+// @ts-check
+/**
+ * tastatur.js — Übersetzt Tasten in Befehle.
+ *
+ * ZWECK:    WASD/Pfeile → STEUERN (nur wenn sich etwas ändert), Q/E → DRUCK, R → TEMPOMAT
+ *           (Tempo halten), dazu Pause, Spieltempo,
+ *           Zoom und Kamera. Die Tastatur schreibt NIE in den Zustand, sie schickt nur Befehle
+ *           an die Verbindung — genau wie später übers Netz.
+ * LIEST:    Tastaturereignisse, Zustand (eigener Koloss) über die Verbindung
+ * SCHREIBT: Befehle über verbindung.senden(), Kamera
+ * REGEL:    KONZEPT.md §7 Steuerung, §8 Regel 4
+ * DEBUG:    Abgelehnte Befehle stehen in der Konsole. `ek.verbindung.protokoll()` zeigt gesendete.
+ *
+ * WARUM e.code statt e.key: e.code meint die Taste an ihrer Stelle, egal ob QWERTZ oder AZERTY.
+ */
+
+import { kolossVon } from '../sim/abfragen.js';
+import { DRUCKSTUFEN, EINGABE_MAX } from '../data/koloss.js';
+import { TEMPI } from '../data/takt.js';
+import { kamera, zoomen } from '../render/kamera.js';
+import { ZOOM_SCHRITT } from '../data/ansicht.js';
+
+/** @typedef {import('../game/spiel.js').Spiel} Spiel */
+
+/** Gerade gedrückte Tasten (e.code). */
+const gedrueckt = new Set();
+/** Zuletzt gesendete Steuerung — nur bei Änderung neu senden (spart später Netzverkehr). */
+let gesendet = { gas: 0, lenkung: 0 };
+/** Gewünschte Druckstufe, die noch nicht im Zustand angekommen ist (oder null). */
+/** @type {number | null} */
+let druckUnterwegs = null;
+
+/**
+ * Richtet die Tastatur ein. NUR EINMAL aufrufen.
+ * @param {() => Spiel} spielHolen  liefert das aktuelle Spiel (ändert sich bei ek.neu())
+ * @param {(an?: boolean) => void} hilfeUmschalten
+ */
+export function tastaturEinrichten(spielHolen, hilfeUmschalten) {
+  window.addEventListener('keydown', (ev) => {
+    if (ev.ctrlKey || ev.altKey || ev.metaKey) return;
+    gedrueckt.add(ev.code);
+    const spiel = spielHolen();
+    if (ev.repeat) return;
+    switch (ev.code) {
+      case 'KeyQ': druckAendern(spiel, -1); break;
+      case 'KeyE': druckAendern(spiel, +1); break;
+      case 'KeyR': tempoHaltenUmschalten(spiel); break;
+      case 'KeyP': spiel.verbindung.pauseSetzen(!spiel.verbindung.pausiert()); break;
+      case 'KeyT': tempoWeiter(spiel); break;
+      case 'Space': kamera.folgen = true; ev.preventDefault(); break;
+      case 'Equal': case 'NumpadAdd': case 'BracketRight': zoomen(ZOOM_SCHRITT * ZOOM_SCHRITT); break;
+      case 'Minus': case 'NumpadSubtract': case 'Slash': zoomen(1 / (ZOOM_SCHRITT * ZOOM_SCHRITT)); break;
+      case 'KeyH': hilfeUmschalten(); break;
+      case 'Escape': hilfeUmschalten(false); break;
+      default: return;
+    }
+  });
+  window.addEventListener('keyup', (ev) => { gedrueckt.delete(ev.code); });
+  // Fenster verliert den Fokus → alle Tasten gelten als losgelassen (sonst fährt er ewig weiter).
+  window.addEventListener('blur', () => gedrueckt.clear());
+}
+
+/**
+ * Einmal pro Bild: Steuerung aus den gedrückten Tasten bilden und bei Änderung senden.
+ * @param {Spiel} spiel
+ */
+export function steuerungSenden(spiel) {
+  const v = spiel.verbindung;
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (!k) return;
+  const vor = gedrueckt.has('KeyW') || gedrueckt.has('ArrowUp');
+  const zurueck = gedrueckt.has('KeyS') || gedrueckt.has('ArrowDown');
+  const links = gedrueckt.has('KeyA') || gedrueckt.has('ArrowLeft');
+  const rechts = gedrueckt.has('KeyD') || gedrueckt.has('ArrowRight');
+  const gas = (vor ? EINGABE_MAX : 0) - (zurueck ? EINGABE_MAX : 0);
+  const lenkung = (rechts ? EINGABE_MAX : 0) - (links ? EINGABE_MAX : 0);
+  if (gas !== gesendet.gas || lenkung !== gesendet.lenkung) {
+    gesendet = { gas, lenkung };
+    v.senden({ art: 'STEUERN', spieler: v.spieler, gas, lenkung });
+  }
+  if (druckUnterwegs !== null && k.druck === druckUnterwegs) druckUnterwegs = null;
+}
+
+/**
+ * Nach einem Neustart (ek.neu) die gemerkten Werte vergessen.
+ */
+export function tastaturZuruecksetzen() {
+  gesendet = { gas: 0, lenkung: 0 };
+  druckUnterwegs = null;
+}
+
+/**
+ * @param {Spiel} spiel
+ * @param {number} richtung  −1 oder +1
+ */
+function druckAendern(spiel, richtung) {
+  const v = spiel.verbindung;
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (!k) return;
+  // WARUM druckUnterwegs: Drückt man E zweimal schnell, ist der erste Befehl evtl. noch nicht
+  // angewendet. Ohne Merker würde zweimal „Stufe 3“ statt „3, dann 4“ geschickt.
+  const basis = druckUnterwegs ?? k.druck;
+  const stufe = Math.max(0, Math.min(DRUCKSTUFEN.length - 1, basis + richtung));
+  if (stufe === basis) return;
+  druckUnterwegs = stufe;
+  v.senden({ art: 'DRUCK', spieler: v.spieler, stufe });
+}
+
+/**
+ * „Tempo halten“ ein- oder ausschalten (Taste R oder Knopf in der Anzeige).
+ * @param {Spiel} spiel
+ */
+export function tempoHaltenUmschalten(spiel) {
+  const v = spiel.verbindung;
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (!k) return;
+  v.senden({ art: 'TEMPOMAT', spieler: v.spieler, an: k.tempomat === 0 });
+}
+
+/**
+ * Zieltempo vom Schieberegler: schaltet „Tempo halten“ mit genau diesem Tempo ein.
+ * @param {Spiel} spiel
+ * @param {number} kmh  ganze km/h
+ */
+export function zieltempoSetzen(spiel, kmh) {
+  const v = spiel.verbindung;
+  v.senden({ art: 'TEMPOMAT', spieler: v.spieler, an: true, kmh });
+}
+
+/** @param {Spiel} spiel */
+function tempoWeiter(spiel) {
+  const v = spiel.verbindung;
+  const i = TEMPI.indexOf(v.tempo());
+  v.tempoSetzen(TEMPI[(i + 1) % TEMPI.length]);
+}

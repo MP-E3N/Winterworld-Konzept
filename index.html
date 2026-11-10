@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--
+  index.html — Eiskoloss (Arbeitstitel). Über den lokalen Server öffnen, nicht über file://
+  (ES-Module brauchen http). Konzept: KONZEPT.md, Stand: HANDOFF.md.
+-->
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Eiskoloss</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="welt"></canvas>
+  <div id="hud"></div>
+  <button id="hilfe-knopf" title="Steuerung (H)">?</button>
+  <div id="hilfe" class="tafel" hidden>
+    <h3>Steuerung</h3>
+    <table>
+      <tr><td>W / S</td><td>Gas / bremsen, im Stand rückwärts</td></tr>
+      <tr><td>A / D</td><td>lenken (wirkt erst bei Fahrt)</td></tr>
+      <tr><td>Q / E</td><td>Kesseldruck runter / rauf</td></tr>
+      <tr><td>R</td><td>Tempo halten an/aus (S schaltet aus, W + Loslassen = neues Tempo; Regler unter dem Knopf stellt das Tempo ein)</td></tr>
+      <tr><td>Mausrad, + / −</td><td>Zoom</td></tr>
+      <tr><td>Rechte Maustaste ziehen</td><td>Karte verschieben</td></tr>
+      <tr><td>Leertaste</td><td>Kamera zurück zum Koloss</td></tr>
+      <tr><td>P</td><td>Pause</td></tr>
+      <tr><td>T</td><td>Tempo 1× / 2× / 4×</td></tr>
+      <tr><td>F3</td><td>Messwerte</td></tr>
+    </table>
+    <p>Testgelände: Geradeaus im Norden liegt ein zugefrorener See (rutschig, schnell, schlechte
+      Bremsen), im Westen eine Pulverschnee-Wehe (halbes Tempo).</p>
+  </div>
+  <pre id="debug" hidden></pre>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

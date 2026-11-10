@@ -1,0 +1,120 @@
+{
+ "seed": 42,
+ "ticks": 1800,
+ "hash": "c99479e1",
+ "protokoll": [
+  {
+   "tick": 0,
+   "befehl": {
+    "art": "BEITRETEN",
+    "spieler": 0,
+    "name": "Testfahrt"
+   }
+  },
+  {
+   "tick": 0,
+   "befehl": {
+    "art": "DRUCK",
+    "spieler": 0,
+    "stufe": 4
+   }
+  },
+  {
+   "tick": 1,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": 100,
+    "lenkung": 0
+   }
+  },
+  {
+   "tick": 300,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": 100,
+    "lenkung": 30
+   }
+  },
+  {
+   "tick": 400,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": 100,
+    "lenkung": 0
+   }
+  },
+  {
+   "tick": 800,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": 100,
+    "lenkung": 100
+   }
+  },
+  {
+   "tick": 880,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": 100,
+    "lenkung": 0
+   }
+  },
+  {
+   "tick": 900,
+   "befehl": {
+    "art": "TEMPOMAT",
+    "spieler": 0,
+    "an": true
+   }
+  },
+  {
+   "tick": 901,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": 0,
+    "lenkung": 0
+   }
+  },
+  {
+   "tick": 1000,
+   "befehl": {
+    "art": "DRUCK",
+    "spieler": 0,
+    "stufe": 1
+   }
+  },
+  {
+   "tick": 1100,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": -100,
+    "lenkung": 0
+   }
+  },
+  {
+   "tick": 1400,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": -100,
+    "lenkung": -100
+   }
+  },
+  {
+   "tick": 1550,
+   "befehl": {
+    "art": "STEUERN",
+    "spieler": 0,
+    "gas": 0,
+    "lenkung": 0
+   }
+  }
+ ]
+}

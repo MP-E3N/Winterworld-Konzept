@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+  test.html — Führt alle Tests im Browser aus (über den lokalen Server öffnen: /tests/test.html).
+  Der Regel-Prüfer (Dateizugriff) läuft hier nicht, nur unter Node (tools/run-tests.ps1).
+  Nutzen: prüfen, dass der Browser exakt dieselben Hashes rechnet wie Node.
+-->
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Eiskoloss — Tests</title>
+  <style>
+    body { font: 14px/1.5 Consolas, monospace; background: #1e1e1e; color: #ddd; padding: 16px; }
+    .gruen { color: #7fdc7f; } .rot { color: #ff7b7b; }
+  </style>
+</head>
+<body>
+  <h2 id="titel">Tests laufen …</h2>
+  <pre id="ergebnis"></pre>
+  <script type="module">
+    import { alleAusfuehren } from './alle.js';
+    const erg = await alleAusfuehren({
+      dateienLesen: null,
+      jsonLaden: async (pfad) => (await fetch('../' + pfad)).json(),
+    });
+    const titel = document.getElementById('titel');
+    titel.textContent = `${erg.fehler === 0 ? 'GRÜN' : 'ROT'}: ${erg.ok} ok, ${erg.fehler} Fehler, ${erg.uebersprungen} übersprungen`;
+    titel.className = erg.fehler === 0 ? 'gruen' : 'rot';
+    document.getElementById('ergebnis').textContent = erg.zeilen.join('\n');
+  </script>
+</body>
+</html>

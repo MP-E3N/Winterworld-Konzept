@@ -1,0 +1,15 @@
+{
+  "name": "eiskoloss",
+  "private": true,
+  "description": "2D-Top-down-Survival im Browser: Dampfkoloss durch eine erfrorene Welt. Siehe KONZEPT.md.",
+  "type": "module",
+  "scripts": {
+    "test": "node tools/run-tests.js",
+    "typen": "tsc -p jsconfig.json",
+    "replay": "node tools/replay-aufnehmen.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}
