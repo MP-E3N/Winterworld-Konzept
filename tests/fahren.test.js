@@ -12,7 +12,7 @@ import { test, pruefe } from './harness.js';
 import { testwelt, fahre, setzeAn } from './helfer.js';
 import { tickAusfuehren } from '../sim/tick.js';
 import { befehlAnwenden } from '../sim/befehle.js';
-import { laengsTempo, querTempo, alsKmh, hoechstTempo, kesselUeberlastet } from '../sim/abfragen.js';
+import { laengsTempo, querTempo, alsKmh } from '../sim/abfragen.js';
 import { DRUCKSTUFEN, RUECKWAERTS_KMH, TELEGRAF, TELEGRAF_STOPP, WENDE_RADIUS } from '../data/koloss.js';
 import { TICKS_PRO_SEKUNDE } from '../data/takt.js';
 
@@ -40,9 +40,11 @@ function laufband(xM, yM, druck, ticks) {
 
 test('Fahren: ohne Gas bleibt der Koloss exakt stehen', () => {
   const { state, k } = testwelt();
-  const vorher = JSON.stringify(k);
+  // Nur die Lage zählt — Brennstoff und Wärme an Bord ändern sich auch im Stand (M4a).
+  const lage = () => JSON.stringify([k.x, k.y, k.vx, k.vy, k.h, k.dreh]);
+  const vorher = lage();
   fahre(state, { lenkung: 100 }, 200);
-  pruefe(JSON.stringify(k) === vorher.replace('"lenkung":0', '"lenkung":100'), `bewegt: ${JSON.stringify(k)}`);
+  pruefe(lage() === vorher, `bewegt: ${lage()}`);
 });
 
 test('Fahren: Volldampf auf Packschnee erreicht das Höchsttempo (34 km/h ± 1)', () => {
@@ -61,16 +63,17 @@ test('Fahren: schwer — nach 3 s noch nicht einmal halbes Höchsttempo', () => 
   pruefe(kmh > 3 && kmh < DRUCKSTUFEN[4].kmh / 2, `${kmh.toFixed(2)} km/h nach 3 s`);
 });
 
-test('Fahren: jede höhere Druckstufe ist schneller, „Kessel ruht“ fährt nicht', () => {
-  let vorher = -1;
+test('Fahren: jede Feuerstufe hält auf Dauer ihr Tempo (Dampfvorrat), „Kessel ruht“ ohne Dampf fährt nicht', () => {
   for (let stufe = 0; stufe < DRUCKSTUFEN.length; stufe++) {
     const { state, k } = testwelt();
     setzeAn(k, 0, 2000, OSTEN);
-    fahre(state, { gas: 100, druck: stufe }, 40 * SEK);
+    fahre(state, { druck: stufe }, 0);
+    if (stufe === 0) k.dampf = 0; // nur in Tests: kalter Kessel
+    // Vollgas, bis der Vorrat aufgebraucht ist und Feuer und Tempo im Gleichgewicht sind.
+    fahre(state, { gas: 100 }, 150 * SEK);
     const kmh = alsKmh(laengsTempo(k));
     if (stufe === 0) pruefe(kmh === 0, `Stufe 0 fährt: ${kmh}`);
-    else pruefe(kmh > vorher + 3, `Stufe ${stufe}: ${kmh.toFixed(1)} nicht schneller als ${vorher.toFixed(1)}`);
-    vorher = kmh;
+    else pruefe(Math.abs(kmh - DRUCKSTUFEN[stufe].kmh) <= 1.5, `Stufe ${stufe}: ${kmh.toFixed(1)} statt ≈ ${DRUCKSTUFEN[stufe].kmh} km/h`);
   }
 });
 
@@ -79,9 +82,11 @@ test('Fahren: Pulverschnee halbiert ungefähr das Höchsttempo', () => {
   pruefe(Math.abs(kmh - 17) <= 2, `${kmh.toFixed(2)} km/h (soll ≈ 17)`);
 });
 
-test('Fahren: dickes Eis ist am Ende schneller (≈ 120 %), aber zäher beim Anfahren', () => {
+test('Fahren: dickes Eis ist am Ende schneller als Schnee, aber zäher beim Anfahren', () => {
+  // WARUM nicht mehr 120 %: Seit dem Dampfvorrat (M4a) kosten durchdrehende Räder Dampf — auf Eis
+  // reicht Volldampf auf Dauer für gut 38 km/h statt der 41, die der Schub allein hergäbe.
   const ende = laufband(0, -450, 4, 120 * SEK);
-  pruefe(Math.abs(ende - 34 * 1.2) <= 2.5, `Eis Höchsttempo ${ende.toFixed(2)} km/h (soll ≈ 40,8)`);
+  pruefe(ende > 36 && ende < 43, `Eis Höchsttempo ${ende.toFixed(2)} km/h (soll ≈ 38–41)`);
   const eisFrueh = laufband(0, -450, 4, 3 * SEK);
   const schneeFrueh = laufband(0, 2000, 4, 3 * SEK);
   pruefe(eisFrueh < schneeFrueh, `Eis nach 3 s ${eisFrueh.toFixed(2)} ≥ Schnee ${schneeFrueh.toFixed(2)}`);
@@ -171,25 +176,6 @@ test('Telegraf: Handgas geht vor, ungültige Stellungen werden abgelehnt', () =>
   pruefe(laengsTempo(k) < 0, 'Handgas rückwärts hat den Telegrafen nicht übersteuert');
   for (const stufe of [-1, TELEGRAF.length, 1.5]) {
     pruefe(!befehlAnwenden(state, { art: 'TELEGRAF', spieler: 0, stufe }).ok, `Stellung ${stufe} erlaubt`);
-  }
-});
-
-test('Telegraf: Kessel überlastet, wenn die Stellung mehr verlangt als der Kessel schafft', () => {
-  const { state, k } = testwelt();
-  setzeAn(k, 0, 2000, OSTEN);
-  fahre(state, { druck: 2, telegraf: 6 }, 1); // Mittel schafft 18 = Halb voraus
-  pruefe(!kesselUeberlastet(state.seed, k), 'Halb voraus mit Mittel gilt als Überlast');
-  fahre(state, { telegraf: 7 }, 1);
-  pruefe(kesselUeberlastet(state.seed, k), 'Voll voraus mit Mittel gilt nicht als Überlast');
-});
-
-test('Abfrage hoechstTempo stimmt mit dem gemessenen Höchsttempo überein (Überlast-Anzeige)', () => {
-  for (const stufe of [1, 2, 4]) {
-    const { state, k } = testwelt();
-    setzeAn(k, 0, 2000, OSTEN);
-    fahre(state, { gas: 100, druck: stufe }, 80 * SEK);
-    const gemessen = alsKmh(laengsTempo(k)), berechnet = alsKmh(hoechstTempo(state.seed, k));
-    pruefe(Math.abs(gemessen - berechnet) < 0.5, `Stufe ${stufe}: gemessen ${gemessen.toFixed(2)}, berechnet ${berechnet.toFixed(2)}`);
   }
 });
 

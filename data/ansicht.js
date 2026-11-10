@@ -69,6 +69,8 @@ export const LICHT_REICHWEITE_M = 85;
 export const LICHT_KEGEL_GRAD = 17;
 /** Deckkraft des Lichtkegels bei hellem Tag (nur ein goldener Schimmer auf dem Schnee). */
 export const LICHT_TAG_DECKKRAFT = 0.3;
+/** So dunkel wird es in tiefer Nacht (0 … 1; ab M4a aus der Tageszeit, sim/wetter/tag.js). */
+export const NACHT_MAX = 0.85;
 /** Farbe der Nacht (r, g, b) — kaltes Dunkelblau. */
 export const NACHT_FARBE = '6, 10, 22';
 

@@ -9,9 +9,9 @@
  *             ek.untergrund()   Untergrund unter dem eigenen Koloss
  *             ek.neu(seed)      neue Welt (0 = Testgelände)
  *             ek.kacheln()      Gelände-Kacheln der Darstellung
- *             ek.nacht(x)       Dunkelheit 0 … 1 zum Testen der Scheinwerfer (ek.nacht(0) = Tag)
+ *             ek.nacht(x)       Dunkelheit 0 … 1 vorgeben (ek.nacht(null) = wieder nach Tageszeit)
  *             ek.funde(m)       Fundstellen im Umkreis m (Standard 600 m) mit Abstand und Rest
- *             ek.ladung()       Laderaum des eigenen Kolosses (t)
+ *             ek.ladung()       beide Lager des eigenen Kolosses (t)
  *             ek.replay()       Protokoll dieser Fahrt als JSON (für Fehlerberichte)
  *             ek.kamera, ek.spiel, ek.verbindung, ek.optik()
  * LIEST:    das Spiel
@@ -73,13 +73,15 @@ export function konsoleEinrichten(spielHolen, neueWelt) {
     ladung() {
       const v = spielHolen().verbindung;
       const k = kolossVon(v.zustand(), v.spieler);
-      return k ? Object.fromEntries(Object.entries(k.ladung).map(([w, kg]) => [w, kg / 1000])) : null;
+      /** @param {Record<string, number>} o */
+      const t = (o) => Object.fromEntries(Object.entries(o).map(([w, kg]) => [w, kg / 1000]));
+      return k ? { brennstoff: t(k.lager.brennstoff), waren: t(k.lager.waren) } : null;
     },
     optik: optikZahlen,
     kacheln: kachelZahlen,
-    /** Dunkelheit zum Ausprobieren der Scheinwerfer (0 = Tag … 1 = Nacht); ab M4 macht das die Tageszeit.
-     * @param {number} [wert=0.85] */
-    nacht(wert = 0.85) { ansichtLicht.nacht = Math.max(0, Math.min(1, wert)); return ansichtLicht.nacht; },
+    /** Dunkelheit vorgeben (0 = Tag … 1 = Nacht), null = wieder nach der Tageszeit (M4a).
+     * @param {number | null} [wert=0.85] */
+    nacht(wert = 0.85) { ansichtLicht.vorgabe = wert === null ? null : Math.max(0, Math.min(1, wert)); return ansichtLicht.vorgabe; },
   };
   /** @type {any} */ (window).ek = ek;
 }

@@ -39,7 +39,7 @@ export function dampfmaschineEinrichten(c) {
 /**
  * Zeichnet ein Bild der Maschine.
  * @param {HTMLCanvasElement} c
- * @param {{druck: number, druckMax: number, gas: number, weg: number, dtMs: number, ueberlast: boolean}} w
+ * @param {{druck: number, druckMax: number, gas: number, weg: number, dtMs: number}} w  druck = Dampfvorrat in Manometer-Stufen
  */
 export function dampfmaschineZeichnen(c, w) {
   const ctx = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
@@ -49,8 +49,6 @@ export function dampfmaschineZeichnen(c, w) {
   const winkel = (w.weg / (Math.PI * TRAKTION_DURCHMESSER_M)) * Math.PI * 2;
   const k = 1 - Math.exp(-w.dtMs / 250);
   optik.nadel += (anteil + (w.gas > 0 ? Math.sin(performance.now() / 90) * 0.015 * anteil : 0) - optik.nadel) * k;
-  // Überlast: Die Nadel zittert heftig um ihren Platz (Spieltest 4 — statt Warntext).
-  const zittern = w.ueberlast ? (Math.random() - 0.5) * 0.16 + Math.sin(performance.now() / 23) * 0.05 : 0;
   optik.flackern = 0.75 + Math.random() * 0.25;
 
   ctx.clearRect(0, 0, B, H);
@@ -65,7 +63,8 @@ export function dampfmaschineZeichnen(c, w) {
   triebwerk(ctx, winkel);
   puffs(ctx, w.dtMs);
   ctx.restore();
-  manometer(ctx, optik.nadel + zittern, w.druckMax);
+  // Kein Zittern mehr (Spieltest M4a): Wer zu viel verlangt, sieht die Nadel fallen.
+  manometer(ctx, optik.nadel, w.druckMax);
 }
 
 /**

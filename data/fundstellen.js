@@ -5,7 +5,7 @@
  * ZWECK:    Welche Fundarten es gibt, wie viel darin liegt, wie lange das Bergen dauert, wie häufig
  *           sie sind und wie viel der Laderaum fasst. Zum Abstimmen nur hier drehen.
  * REGEL:    docs/specs/M3-fundstellen.md, KONZEPT.md §4
- * DEBUG:    `ek.funde()` listet die Fundstellen in der Nähe, `ek.ladung()` den Laderaum.
+ * DEBUG:    `ek.funde()` listet die Fundstellen in der Nähe, `ek.ladung()` die Lager.
  *
  * EINHEITEN: Gewichte in kg (Ganzzahl), Strecken in Metern (werden in sim/ nach µm umgerechnet),
  * Arbeit in „Mann-Ticks“ (ein Mann arbeitet einen Tick = 1/20 s).
@@ -17,7 +17,7 @@ import { TICKS_PRO_SEKUNDE } from './takt.js';
 /** @typedef {'kohle' | 'holz' | 'oel' | 'nahrung'} Ware */
 
 /**
- * Waren im Laderaum, in fester Reihenfolge (Anzeige, Zustand `koloss.ladung`).
+ * Waren in fester Reihenfolge (Namen und Farben für Anzeige und Lager-Popup).
  * @type {readonly {ware: Ware, name: string, farbe: string}[]}
  */
 export const WAREN = [
@@ -88,7 +88,35 @@ export const BERGEN_REICHWEITE_M = 60;
 /** Bis zu diesem Tempo gilt der Koloss als stehend (µm/Tick, je Richtung).
  * WARUM nicht 0: Auf Eis klingt Rutschen in Ganzzahlen nie ganz auf 0 ab (Rest < 0,1 km/h). */
 export const STAND_TEMPO = kmhZuTempo(0.1);
-/** Fassungsvermögen des Laderaums (kg, Summe aller Waren). */
-export const LADERAUM_KG = 60000;
-/** Gewicht bremst: Bei vollem Laderaum hat der Kessel so viele Promille weniger Schub. */
-export const GEWICHT_BREMST_PROMILLE = 250;
+
+// ── Zwei Lager (Spieltest M4a, Nutzerwunsch) ──────────────
+
+/**
+ * Brennstofflager (Kohle, Holz, Öl — daraus heizt der Kessel) und Warenlager (Holz als Baustoff,
+ * Vorräte, später Ersatzteile). Holz passt in beide; wohin neu geborgenes Holz kommt, sagt
+ * k.holzZiel. Index = Lager-Nummer in Befehlen.
+ * @type {readonly {schluessel: 'brennstoff' | 'waren', name: string, kg: number, waren: readonly Ware[]}[]}
+ */
+export const LAGER = [
+  { schluessel: 'brennstoff', name: 'Brennstofflager', kg: 100000, waren: ['kohle', 'holz', 'oel'] },
+  { schluessel: 'waren', name: 'Warenlager', kg: 60000, waren: ['holz', 'nahrung'] },
+];
+export const BRENNSTOFFLAGER = 0;
+export const WARENLAGER = 1;
+
+/** Gewicht bremst: je GEWICHT_BEZUG_KG Ladung so viele Promille weniger Schub (160 t voll ≈ −32 %). */
+export const GEWICHT_BREMST_PROMILLE = 200;
+export const GEWICHT_BEZUG_KG = 100000;
+
+// ── Abwerfen (Spieltest M4a) ──────────────────────────────
+
+/** So viel wirft ein Klick ab (kg); mit Umschalt die ganze Ware. */
+export const ABWERFEN_KG = 1000;
+/** Abgeworfenes landet so weit hinter der Rumpfmitte (m) — in Reichweite des Trupps. */
+export const ABWURF_HINTER_M = 26;
+/** Verschiedene Waren landen so weit nebeneinander (m). */
+export const ABWURF_SEITE_M = 7;
+/** Liegt schon ein Haufen derselben Ware so nah (m), wird er größer statt eines neuen. */
+export const ABWURF_ZUSAMMEN_M = 12;
+/** Wieder aufnehmen geht schneller als bergen (Prozent der Arbeit der Fundart). */
+export const ABWURF_ARBEIT_PROZENT = 50;

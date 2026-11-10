@@ -16,7 +16,10 @@ import { bildZeichnen } from './render/zeichnen.js';
 import { optikZuruecksetzen } from './render/spuren.js';
 import { schneetreibenZuruecksetzen } from './render/wind.js';
 import { weltZuruecksetzen } from './render/welt.js';
-import { tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, telegrafSetzen, lichtUmschalten } from './eingabe/tastatur.js';
+import {
+  tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, telegrafSetzen, lichtUmschalten, brennstoffWaehlen, heizungUmschalten,
+} from './eingabe/tastatur.js';
+import { lagerEinrichten, lagerAktualisieren } from './ui/lager.js';
 import { mausEinrichten } from './eingabe/maus.js';
 import { fundstellenZuruecksetzen } from './render/fundstellen.js';
 import { anzeigeAufbauen, anzeigeAktualisieren } from './ui/anzeige.js';
@@ -72,7 +75,13 @@ window.addEventListener('resize', groesseAnpassen);
 kameraEinrichten(canvas);
 tastaturEinrichten(() => spiel, hilfeUmschalten);
 mausEinrichten(canvas, () => spiel);
-anzeigeAufbauen(hud, { telegraf: (stufe) => telegrafSetzen(spiel, stufe), licht: () => lichtUmschalten(spiel) });
+anzeigeAufbauen(hud, {
+  telegraf: (stufe) => telegrafSetzen(spiel, stufe),
+  licht: () => lichtUmschalten(spiel),
+  heizung: () => heizungUmschalten(spiel),
+  brennstoff: (wahl) => brennstoffWaehlen(spiel, wahl),
+});
+lagerEinrichten(hud, () => spiel);
 overlayEinrichten(debugEl);
 konsoleEinrichten(() => spiel, neueWelt);
 hilfeKnopf.addEventListener('click', () => hilfeUmschalten());
@@ -87,6 +96,7 @@ function bild(jetzt) {
   bildSchritt(spiel, dt);
   bildZeichnen(ctx, spiel, dt);
   anzeigeAktualisieren(spiel, dt);
+  lagerAktualisieren(spiel);
   overlayAktualisieren(debugEl, spiel, dt);
   requestAnimationFrame(bild);
 }

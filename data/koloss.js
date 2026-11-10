@@ -148,3 +148,61 @@ export const EINGABE_MAX = 100;
 export const START_X = 0;
 export const START_Y = 0;
 export const START_RICHTUNG = 49152;
+
+// ── Kessel und Brennstoff (M4a, Spieltest M4a: Dampfvorrat) ──
+
+/**
+ * Brennstoffe, Index = k.brennstoff. `ware` = Feld im Brennstofflager (k.lager.brennstoff).
+ *   verbrauch  Prozent der Kohle-Menge für dieselbe Hitze (Holz brennt schnell, Öl lange)
+ * @type {readonly {name: string, ware: 'kohle' | 'holz' | 'oel', verbrauch: number}[]}
+ */
+export const BRENNSTOFFE = [
+  { name: 'Kohle', ware: 'kohle', verbrauch: 100 },
+  { name: 'Holz', ware: 'holz', verbrauch: 200 },
+  { name: 'Öl', ware: 'oel', verbrauch: 50 },
+];
+
+/**
+ * DAMPFVORRAT (Spieltest M4a, Nutzerwunsch): Der Kessel ist ein Vorrat (k.dampf, 0 … DAMPF_MAX).
+ * Das Feuer füllt ihn (höchstens ERZEUGUNG je Feuerstufe), die Maschine leert ihn (Schub × Tempo).
+ * Verlangt der Telegraf mehr, als das Feuer liefert, sinkt der Druck — und mit ihm der mögliche
+ * Schub —, bis man langsamer fährt oder stärker heizt. Statt einer zitternden Nadel.
+ * Eine Manometer-Stufe = DAMPF_JE_STUFE.
+ */
+export const DAMPF_JE_STUFE = 100000;
+export const DAMPF_MAX = 4 * DAMPF_JE_STUFE;
+
+/** Tempo jeder Feuerstufe (µm/Tick), das sie auf Packschnee auf Dauer halten kann. */
+const DAUERTEMPO = DRUCKSTUFEN.map((d) => kmhZuTempo(d.kmh));
+
+/**
+ * Dampfverbrauch je Tick = Maschinenschub × Tempo / DAMPF_TEILER.
+ * WARUM so gewählt: Bei Volldampf und 34 km/h verbraucht die Maschine 1600 Einheiten je Tick — ein
+ * voller Kessel reicht dann ohne Feuer etwa 12 s. So spürt man den Vorrat, ohne dass er ewig hält.
+ */
+export const DAMPF_TEILER = Math.floor((SCHUB[4] * DAUERTEMPO[4]) / 1600);
+
+/**
+ * Höchste Dampferzeugung je Feuerstufe (Einheiten je Tick): so viel, dass die Stufe ihr Tempo aus
+ * DRUCKSTUFEN auf Packschnee auf Dauer hält (+5 % Reserve). Widerstand ∝ Tempo → Leistung ∝ Tempo²:
+ * schnell fahren kostet je km deutlich mehr („schnell und verschwenderisch“).
+ */
+export const ERZEUGUNG = DRUCKSTUFEN.map((_, s) => Math.ceil((SCHUB[s] * DAUERTEMPO[s] * 105) / (DAMPF_TEILER * 100)));
+
+/**
+ * Brennstoff je Dampf-Einheit (mg Kohle). Die Heizer legen nur nach, was gebraucht wird (Nutzer-
+ * entscheidung): Steht der Kessel voll, brennt nur die Glut. Bei „Mittel“ unter Volllast ≈ 360 kg/min.
+ */
+export const MG_JE_DAMPF = 640;
+/** Glut halten (g Kohle je Tick, ≈ 20 kg/min), solange Brennstoff da ist. */
+export const GLUT_G_TICK = 17;
+/** Ohne Feuer (oder „Kessel ruht“) kühlt der Kessel ab: so viel Dampf geht je Tick verloren (~3 min). */
+export const DAMPF_VERLUST = 100;
+
+/** Heizung an Bord (wie die Lampe ein Schalter): so viel Brennstoff zusätzlich (g Kohle je Tick,
+ * ≈ 60 kg/min) … */
+export const HEIZUNG_G_TICK = 50;
+
+/** Brennstoff an Bord beim Start (kg). */
+export const START_KOHLE_KG = 4000;
+export const START_HOLZ_KG = 1000;

@@ -8,10 +8,12 @@
  * SCHREIBT: —
  */
 
-import { UM_PRO_METER, SCHUB, SCHUB_RUECKWAERTS, TELEGRAF, TEMPO_EIN_KMH, TELEGRAF_STOPP, RUMPF_VOR_DREHPUNKT_M } from '../data/koloss.js';
-import { WAREN, LADERAUM_KG, GEWICHT_BREMST_PROMILLE, STAND_TEMPO, BERGEN_REICHWEITE_M } from '../data/fundstellen.js';
-import { UNTERGRUND } from '../data/untergrund.js';
-import { untergrundAn } from './welt/untergrund.js';
+import {
+  UM_PRO_METER, SCHUB, SCHUB_RUECKWAERTS, TELEGRAF, TEMPO_EIN_KMH, TELEGRAF_STOPP, RUMPF_VOR_DREHPUNKT_M, DAMPF_MAX, DAMPF_JE_STUFE,
+} from '../data/koloss.js';
+import { STAND_TEMPO, BERGEN_REICHWEITE_M } from '../data/fundstellen.js';
+import { TEMP_START, TEMP_RING, RING_KALT_M, TEMP_NACHT, WINDKAELTE_PROMILLE } from '../data/klima.js';
+import { dunkelheit } from './wetter/tag.js';
 import { cosW, sinW, teile, TRIG_EINS } from './lib/winkel.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
@@ -65,21 +67,6 @@ export function alsMeter(um) {
 }
 
 /**
- * Höchsttempo, das der Kessel auf der aktuellen Druckstufe und dem Boden unter dem Koloss mit
- * Vollgas erreicht (µm/Tick, Betrag). Gleichgewicht Schub = Widerstand (siehe sim/koloss/fahren.js).
- * Für die Anzeige: Verlangt der Telegraf mehr, ist der Kessel überlastet.
- * @param {number} seed  Welt-Seed
- * @param {Koloss} k
- * @param {boolean} [rueckwaerts=false]
- * @returns {number}
- */
-export function hoechstTempo(seed, k, rueckwaerts = false) {
-  const u = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
-  const schub = schubMitLadung(k, rueckwaerts ? (k.druck > 0 ? SCHUB_RUECKWAERTS : 0) : SCHUB[k.druck]);
-  return teile(schub * u.zug * 4096, u.widerstand * 100);
-}
-
-/**
  * Zieltempo der aktuellen Telegrafen-Stellung (µm/Tick, < 0 = rückwärts).
  * @param {Koloss} k
  * @returns {number}
@@ -88,19 +75,7 @@ export function telegrafZiel(k) {
   return TELEGRAF[k.telegraf].kmh * TEMPO_EIN_KMH;
 }
 
-/**
- * Kessel überlastet: Der Telegraf verlangt mehr Tempo, als der Kessel auf diesem Boden schafft
- * (die Anzeige lässt dann die Manometer-Nadel zittern). Handgas zählt nicht.
- * @param {number} seed @param {Koloss} k
- * @returns {boolean}
- */
-export function kesselUeberlastet(seed, k) {
-  const ziel = telegrafZiel(k);
-  if (k.gas !== 0 || ziel === 0) return false;
-  return Math.abs(ziel) > hoechstTempo(seed, k, ziel < 0);
-}
-
-// ── Bergen und Laderaum (M3) ──────────────────────────────
+// ── Bergen (M3) ─────────────── ──────────────────────────────
 
 /**
  * Rumpfmitte (µm). Die Position im Zustand ist der Drehpunkt; der Rumpf liegt
@@ -151,38 +126,6 @@ export function fundRest(state, f) {
 }
 
 /**
- * Gesamtgewicht im Laderaum (kg).
- * @param {Koloss} k
- * @returns {number}
- */
-export function ladungKg(k) {
-  let summe = 0;
-  for (const w of WAREN) summe += k.ladung[w.ware];
-  return summe;
-}
-
-/**
- * Freier Platz im Laderaum (kg).
- * @param {Koloss} k
- * @returns {number}
- */
-export function ladungFrei(k) {
-  return LADERAUM_KG - ladungKg(k);
-}
-
-/**
- * Schub nach Abzug für das Gewicht der Ladung: linear bis GEWICHT_BREMST_PROMILLE bei vollem
- * Laderaum. Leer = genau der volle Schub (Fahrwerte und Replays aus M1/M2 bleiben gleich).
- * @param {Koloss} k
- * @param {number} schub  µm/Tick²
- * @returns {number}
- */
-export function schubMitLadung(k, schub) {
-  const abzug = teile(ladungKg(k) * GEWICHT_BREMST_PROMILLE, LADERAUM_KG);
-  return teile(schub * (1000 - abzug), 1000);
-}
-
-/**
  * Der Bergungstrupp eines Kolosses.
  * @param {Zustand} state
  * @param {Koloss} k
@@ -190,4 +133,53 @@ export function schubMitLadung(k, schub) {
  */
 export function truppVon(state, k) {
   return state.trupps[k.trupp];
+}
+
+// ── Kessel und Kälte (M4a) ────────────────────────────────
+
+/**
+ * Wert zwischen zwei Tabelleneinträgen, gleitend nach einer Stufe in DAMPF_JE_STUFE-Teilen.
+ * @param {readonly number[]} tabelle  ein Wert je Stufe
+ * @param {number} wert  0 … (Stufen − 1) × DAMPF_JE_STUFE
+ * @returns {number}
+ */
+export function nachStufe(tabelle, wert) {
+  const stufe = Math.min(tabelle.length - 1, Math.floor(wert / DAMPF_JE_STUFE));
+  if (stufe >= tabelle.length - 1) return tabelle[tabelle.length - 1];
+  return tabelle[stufe] + teile((tabelle[stufe + 1] - tabelle[stufe]) * (wert - stufe * DAMPF_JE_STUFE), DAMPF_JE_STUFE);
+}
+
+/**
+ * Höchster Schub vorwärts beim jetzigen Dampfvorrat (µm/Tick², ohne Abzug für Ladung).
+ * WARUM linear zum Druck (Spieltest M4a): Voller Kessel = volle Kraft, egal wie stark das Feuer
+ * gerade ist. Wer mehr verlangt, als das Feuer nachliefert, leert den Vorrat — der Druck fällt,
+ * der Schub mit ihm, bis Tempo und Feuer wieder zusammenpassen.
+ * @param {Koloss} k
+ * @returns {number}
+ */
+export function kesselSchub(k) {
+  return teile(SCHUB[SCHUB.length - 1] * k.dampf, DAMPF_MAX);
+}
+
+/**
+ * Höchster Schub rückwärts: braucht mindestens eine Manometer-Stufe Dampf, darunter anteilig weniger.
+ * @param {Koloss} k
+ * @returns {number}
+ */
+export function kesselSchubRueckwaerts(k) {
+  return teile(SCHUB_RUECKWAERTS * Math.min(k.dampf, DAMPF_JE_STUFE), DAMPF_JE_STUFE);
+}
+
+/**
+ * Außentemperatur am Koloss (Zehntel °C): kälter nach außen, nachts und bei Wind.
+ * @param {Zustand} state
+ * @param {Koloss} k
+ * @returns {number}
+ */
+export function aussenTemperatur(state, k) {
+  const weiteM = teile(Math.max(Math.abs(k.x), Math.abs(k.y)), UM_PRO_METER);
+  const ring = teile(TEMP_RING * Math.min(weiteM, RING_KALT_M), RING_KALT_M);
+  const nacht = teile(TEMP_NACHT * dunkelheit(state.tick), 1000);
+  const wind = -teile(state.wetter.windStaerke * WINDKAELTE_PROMILLE, 1000);
+  return TEMP_START + ring + nacht + wind;
 }

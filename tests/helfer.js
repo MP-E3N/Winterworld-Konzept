@@ -10,7 +10,7 @@ import { neuerZustand } from '../sim/zustand.js';
 import { befehlAnwenden } from '../sim/befehle.js';
 import { tickAusfuehren } from '../sim/tick.js';
 import { kolossVon } from '../sim/abfragen.js';
-import { UM_PRO_METER } from '../data/koloss.js';
+import { UM_PRO_METER, DAMPF_MAX } from '../data/koloss.js';
 
 /** @typedef {import('../sim/types.js').Zustand} Zustand */
 /** @typedef {import('../sim/types.js').Koloss} Koloss */
@@ -30,12 +30,17 @@ export function testwelt(seed = 0) {
 
 /**
  * Setzt Gas/Lenkung/Druck/Telegraf über echte Befehle und fährt n Ticks.
+ * WARUM der Kessel dabei voll gemacht wird: Fahrtests prüfen die Physik, nicht den Dampfvorrat
+ * (M4a) — den prüft tests/kessel.test.js. Nur in Tests erlaubt.
  * @param {Zustand} state
  * @param {{gas?: number, lenkung?: number, druck?: number, telegraf?: number}} steuer
  * @param {number} ticks
  */
 export function fahre(state, steuer, ticks) {
-  if (steuer.druck !== undefined) pflicht(befehlAnwenden(state, { art: 'DRUCK', spieler: 0, stufe: steuer.druck }));
+  if (steuer.druck !== undefined) {
+    pflicht(befehlAnwenden(state, { art: 'DRUCK', spieler: 0, stufe: steuer.druck }));
+    state.kolosse[0].dampf = DAMPF_MAX; // voller Kessel
+  }
   if (steuer.telegraf !== undefined) pflicht(befehlAnwenden(state, { art: 'TELEGRAF', spieler: 0, stufe: steuer.telegraf }));
   pflicht(befehlAnwenden(state, { art: 'STEUERN', spieler: 0, gas: steuer.gas ?? 0, lenkung: steuer.lenkung ?? 0 }));
   for (let i = 0; i < ticks; i++) tickAusfuehren(state);

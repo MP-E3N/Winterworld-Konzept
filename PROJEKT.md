@@ -11,7 +11,8 @@ Crew und Rumpf am Leben — allein oder später mit 2–4 anderen Kolossen in de
 Namen, Lore oder Grafik.
 
 **Stand 2026-11-10:** M0 Gerüst, M1 Fahren, M2 Welt und M3 Fundstellen & Bergen sind gebaut und
-spielbar (M3 noch ohne Nutzer-Spieltest). Nächster Meilenstein: **M4 Überleben**.
+spielbar; M4a (Kessel frisst Brennstoff, Tag/Nacht, Kälte) ist gebaut und wartet auf den Spieltest.
+Weiter geht es mit **M4b Crew**.
 
 ---
 
@@ -33,10 +34,13 @@ nötig — Node wird nur für Tests gebraucht (später auch für den Server).
 |---|---|
 | W / S (↑ / ↓) | Maschinentelegraf eine Stellung voraus / zurück — die Maschine hält das Tempo selbst |
 | A / D (← / →) | Lenken (Allradlenkung; dreht nur beim Rollen, Wendekreis 32 m) |
-| Q / E | Kesseldruck runter / rauf (5 Stufen; begrenzt, welche Telegrafen-Stellung erreicht wird) |
+| Q / E | Feuer runter / rauf (5 Stufen) — füllt den Dampfvorrat; wer mehr verlangt, sieht den Druck fallen |
+| B, Klick auf den Wahlschalter | Brennstoff: Kohle, Holz (brennt doppelt so schnell), Öl (halb so schnell) |
+| O, Klick auf den Ofen | Heizung an Bord an/aus (wärmt, kostet Brennstoff) |
+| I, Klick auf den Koloss | Lager-Popup: Brennstofflager 100 t, Warenlager 60 t, abwerfen, Holz umlagern |
 | Klick auf den Telegrafen | Hebel direkt auf eine Stellung stellen |
 | L, Klick auf die Öllampe | Scheinwerfer an/aus |
-| Linksklick auf eine Fundstelle | Trupp bergen lassen (nur im Stand, in 60 m Reichweite); nochmal: zurückholen |
+| Linksklick auf eine Fundstelle / einen Haufen | Trupp bergen lassen (nur im Stand, in 60 m Reichweite); nochmal: zurückholen |
 | Mausrad, + / − | Zoom (0,05 … 40 Bildpunkte je Meter) |
 | rechte/mittlere Maustaste ziehen | Karte verschieben |
 | Leertaste | Kamera zurück zum Koloss |
@@ -69,7 +73,7 @@ nötig — Node wird nur für Tests gebraucht (später auch für den Server).
 | ✔ M1 | Fahren | Fahrphysik, Lenkung, Rutschen, Zoom |
 | ✔ M2 | Welt | Generator, Kollision, Kachel-Darstellung |
 | ✔ M3 | Fundstellen & Bergen | Fundstellen aus dem Seed, Klick → Bergen mit Ladebalken, Laderaum + Gewicht (Nebel später) |
-| M4 | Überleben | Kohleverbrauch, Kälte, Tag/Nacht, Crew, Eisbruch, Liegenbleiben, erste Siedlung |
+| ▶ M4 | Überleben | ✔ M4a Kessel/Brennstoff/Tag/Kälte · M4b Crew · M4c Eisbruch, Schaden, Liegenbleiben (Wrack) · M4d erste Siedlung |
 | M5 | Ereignisse | Stürme mit Vorwarnung, Entscheidungen, Reichweiten-Ring, Aufträge |
 | M6 | Multiplayer | Node-Server, WebSocket, 2–4 Spieler, Vorhersage + Korrektur |
 | M7+ | Ausbau | Module, sichtbare Bergungstrupps, Abschleppen, echte Grafik, Ton |

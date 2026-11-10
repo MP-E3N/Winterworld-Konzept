@@ -13,6 +13,7 @@
 import { windSchritt } from './wetter/wind.js';
 import { fahrSchritt } from './koloss/fahren.js';
 import { bergenSchritt } from './bergen.js';
+import { kesselSchritt } from './koloss/kessel.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 
@@ -24,7 +25,11 @@ export function tickAusfuehren(state) {
   windSchritt(state);
   // 2. Kolosse in ID-Reihenfolge. WARUM wichtig: Ab M2 können sie sich berühren; dann muss jeder
   //    Rechner sie in derselben Reihenfolge bewegen.
-  for (const k of state.kolosse) fahrSchritt(k, state.seed);
+  for (const k of state.kolosse) {
+    // Kessel vor dem Fahren: Der Schub dieses Ticks sieht schon den neuen Dampf (M4a).
+    kesselSchritt(k, state);
+    fahrSchritt(k, state.seed);
+  }
   // 3. Bergen nach dem Fahren: Wer in diesem Tick losgefahren ist, bricht sofort ab.
   bergenSchritt(state);
   state.tick += 1;

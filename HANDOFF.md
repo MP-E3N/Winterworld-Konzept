@@ -7,16 +7,51 @@
 
 1. **Lesen:** `CLAUDE.md` (Regeln, Gelernte Regeln) → dieses Dokument → `PROJEKT.md` (Überblick)
    → bei Bedarf `KONZEPT.md` (Spielidee, Bauplan §10, Entscheidungen §11),
-   `docs/ENTSCHEIDUNGEN.md` (E-001…E-013), `docs/specs/M2-welt.md`.
+   `docs/ENTSCHEIDUNGEN.md` (E-001…E-016), `docs/specs/` (M2, M3, M4a).
 2. **Prüfen:** `powershell -ExecutionPolicy Bypass -File tools\run-tests.ps1` → muss „ALLES GRUEN“
-   melden (68 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
+   melden (78 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
 3. **Spielen:** Vorschau „eiskoloss“ starten (`.claude/launch.json`, Port 5176) →
    http://localhost:5176/. Steuerung hinter dem „?“. Konsole (F12): `ek.…`, z. B. `ek.neu(0)`
-   = Testgelände, `ek.step(n)`, `ek.untergrund()`, `ek.kacheln()`, `ek.nacht(0.85)` (Dunkelheit zum
-   Testen der Scheinwerfer, `ek.nacht(0)` = Tag), `ek.optik()`. F3 = Messwerte (inkl. Bilder/s).
+   = Testgelände, `ek.step(n)`, `ek.untergrund()`, `ek.kacheln()`, `ek.nacht(0.85)` (Dunkelheit vorgeben,
+   `ek.nacht(null)` = wieder Tageszeit), `ek.funde()`, `ek.ladung()`, `ek.optik()`. F3 = Messwerte (inkl. Bilder/s).
 4. **git:** Branch `main`, Remote `origin` = https://github.com/MP-E3N/Winterworld-Konzept
    (Repository „Winterworld Konzept“ des Nutzers). Commits: `2ae5d9c` M0+M1 · `2924611` M2 Welt ·
-   `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · danach **M3 Fundstellen & Bergen** (siehe `git log`).
+   `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · `7e5c53e` M3 Fundstellen & Bergen · danach **M4a + Spieltest M4a** (siehe `git log`).
+
+## Stand 2026-11-10 nachts: Spieltest M4a umgesetzt und committet (78 Tests grün)
+
+Nutzer-Spieltest M4a (Screenshot nachts, F3: 16 Bilder/s) mit fünf Punkten — alle umgesetzt.
+Spec-Nachtrag oben in `docs/specs/M4a-kessel-kaelte.md`, Entscheidung E-016, Zustand v8.
+
+1. **Nachts weniger Bilder/s:** Konsole ohne Fehler. JS-Zeit nachts sogar kleiner → Grafikkarte:
+   Dunkel-Ebene (`render/licht.js`) jetzt in halber Auflösung (`DUNKEL_AUFLOESUNG`). **Vom Nutzer
+   noch zu bestätigen** (versteckte Vorschau kann keine echten Bilder/s messen).
+2. **Dampfvorrat statt zitternder Nadel:** `k.dampf` ist ein Vorrat (0 … 400 000); Feuer füllt höchstens
+   `ERZEUGUNG[Feuerstufe]`, Maschine entnimmt Schub × Tempo; höchster Schub ∝ Druck
+   (`kesselSchub()`). Zu viel verlangt → Druck fällt, Tempo sinkt aufs Dauertempo der Feuerstufe.
+   Heizer legen nur nach, was gebraucht wird (Nutzerwahl). Gemessen: 0,77 t/km langsam, 1,24 t/km
+   Mittel, 2,2 t/km Volldampf. `hoechstTempo`/`kesselUeberlastet`/Zittern entfernt.
+   Holz ×2, Öl ×0,5 Verbrauch (Öl heizt NICHT mehr schneller auf).
+3. **Heizung** wie die Lampe: Befehl `HEIZUNG`, Taste O, Ofen-Schalter (`ui/ofen.js`) neben der Lampe;
+   +60 kg/min, +15 °C an Bord, nur solange das Feuer brennt.
+4. **Brennstofflager 100 t + abwerfen:** Abgeworfenes liegt als Haufen 26 m hinter dem Koloss (je Ware
+   7 m seitlich versetzt), `state.abwuerfe`, kann per Klick wieder aufgenommen werden (`AUFNEHMEN`,
+   halbe Arbeit). 1 t je Klick, Umschalt = alles.
+5. **Warenlager 60 t** (Nutzerwahl) für Holz und Vorräte; Holz umlagern (⇄) und „Neues Holz ins
+   Brennstoff/Waren“ (`HOLZZIEL`). **Lager-Popup** (`ui/lager.js`) neben dem Koloss: Klick auf den
+   eigenen Koloss oder Taste I. Anzeige unten links: zwei Füllbalken statt Waren-Zeile.
+- Neue Dateien: `sim/koloss/lager.js` (einzige Stelle für Lager), `sim/befehle-lager.js` (Bergen- und
+  Lager-Befehle), `render/fund-marken.js` (Ladebalken/Ring/Schild), `ui/lager.js`, `ui/ofen.js`,
+  `tests/lager.test.js`. Fundstellen und Abwürfe teilen sich in der Darstellung die Form „Marke“.
+- Gewicht: −20 % Schub je 100 t (`GEWICHT_BREMST_PROMILLE`/`GEWICHT_BEZUG_KG`).
+- **Replay neu** (Zustand v8). Im Browser geprüft: Popup, Abwerfen, Haufen anklicken → Aufnehmen,
+  Ofen glüht, keine Konsolenfehler.
+
+### Nächster Schritt
+1. **Spieltest** durch den Nutzer (Bilder/s nachts? Dampfvorrat-Gefühl, Verbrauch, Popup).
+2. Committet (Nutzer: „Passt, committen“); Push nach GitHub noch offen.
+3. Danach **M4b Crew** (Hunger, Gesundheit, Moral; Wärme an Bord bekommt Wirkung, Vorräte werden
+   gegessen) — Spec zuerst.
 
 ## Stand 2026-11-10 abends: M3 Fundstellen & Bergen gebaut, getestet und committet (68 Tests grün)
 
@@ -56,8 +91,38 @@ Spec: `docs/specs/M3-fundstellen.md`, Entscheidung E-014.
   Danach M4b Crew (Hunger, Gesundheit, Moral), M4c Eisbruch/Rumpfschaden/Liegenbleiben,
   M4d erste Siedlung.
 
-### Nächster Schritt
-**M4a** — Spec `docs/specs/M4a-kessel-kaelte.md` (Vorschläge und offene Fragen darin), dann bauen.
+## Stand 2026-11-10 spät: M4a Kessel, Brennstoff, Tag/Nacht, Kälte gebaut (NICHT committet, 75 Tests grün)
+
+M3 ist committet und gepusht (`7e5c53e`). Nutzerentscheidungen für M4a: **Tag = 20 min**,
+**Verbrauch „mittel“**, **Brennstoff selbst wählen** (kein automatischer Wechsel), **Druck träge**.
+Spec: `docs/specs/M4a-kessel-kaelte.md`, Entscheidung E-015.
+
+- **Zustand v7:** `k.dampf` (echter Druck, 0 … 4000 Tausendstel-Stufen; `k.druck` = eingestellte
+  Feuerstufe), `k.brennstoff` (0 Kohle, 1 Holz, 2 Öl), `k.feuerG` (Gramm-Sammler), `k.waerme`
+  (Zehntel °C). Start: warmer Kessel, 4 t Kohle + 1 t Holz an Bord.
+- **Kessel** `sim/koloss/kessel.js` (Tick vor dem Fahren): verfeuert den gewählten Brennstoff aus dem
+  Laderaum (`VERBRAUCH_KG_MIN` 20/200/360/540/760 bei Volllast, ohne Last 20 %; Holz ×2, Öl ×0,5),
+  Dampf steigt ~15 s je Stufe (Öl doppelt so schnell), fällt ~10 s, ohne Feuer ~25 s bis 0.
+  Schub gleitend aus dem Dampf (`kesselSchub()`, `nachDampf()` in sim/abfragen.js).
+- **Befehl** `BRENNSTOFF {wahl}`; Taste **B** schaltet weiter, Messing-Wahlschalter in der Zeile
+  „Kessel“ (gewählter glüht, leerer matt).
+- **Tag/Nacht** `sim/wetter/tag.js` aus `state.tick` (kein Feld): Start 08:00, hell 06:00–19:12,
+  Nacht 21:36–03:36, `dunkelheit()` 0 … 1000 → Darstellung (`NACHT_MAX` 0,85). `ek.nacht(x)` ist
+  jetzt eine Vorgabe, `ek.nacht(null)` = wieder Tageszeit. Uhr unten rechts („☀ Tag 1 · 08:00“).
+- **Kälte:** `aussenTemperatur()` −20 °C am Start, bis −45 °C ab 5 km, nachts −10, Wind −0,5 °C je m/s.
+  Wärme an Bord nähert sich „außen + Kesselwärme“ (data/klima.js). Zeile „Kälte“ in der Anzeige.
+  Noch ohne Wirkung — die kommt mit der Crew (M4b).
+- **Überlast-Nadel** mit 0,5 km/h Spielraum (`UEBERLAST_SPIEL`), sonst zitterte sie schon wegen der
+  Startladung bei „Halb voraus“.
+- Tests: `tests/kessel.test.js` (7 neu); Fahrtests nutzen einen warmen Kessel (`fahre()` setzt den
+  Dampf), Bergen-Tests eine eigene Welt mit Holzfeuer. **Replay neu** (Zustand v7, träger Druck).
+- Im Browser geprüft: Uhr, Kälte, Wahlschalter; Nacht um 23:09 mit Scheinwerfern (−31 °C, an Bord
+  1 °C bei „Mittel“ im Stand), Wahl „Öl“ ohne Öl → Feuer aus, Dampf sinkt. Keine Konsolenfehler.
+
+### Nächster Schritt (damals — Spieltest kam, siehe oben)
+1. **Spieltest M4a** durch den Nutzer (Verbrauch, Trägheit des Drucks, Nacht, Kälte-Anzeige).
+2. Committet (Nutzer: „Passt, committen“); Push nach GitHub noch offen.
+3. Danach **M4b Crew** (Hunger, Gesundheit, Moral; Wärme an Bord bekommt Wirkung) — Spec zuerst.
 
 ## Stand 2026-11-10 (nach Spieltest M2b, 9 Runden)
 

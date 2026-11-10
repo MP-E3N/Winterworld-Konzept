@@ -95,6 +95,29 @@ Vorräte), Bergen nur im Stand (Telegraf Stopp, fast 0 km/h — auf Eis klingt R
 nie ganz auf 0 ab), Nebel später. **Gewicht** senkt den Schub linear bis −25 % bei vollem Laderaum
 (60 t); leer ist alles exakt wie vorher. Zustand v6, Replay neu aufgenommen (Testfahrt birgt zuerst Kohle).
 
+## E-015 Träger Dampf, Brennstoff aus dem Laderaum, Tageszeit aus dem Tick (2026-11-10, M4a)
+Nutzerentscheidungen: Tag = 20 min, Verbrauch „mittel“, Brennstoff selbst wählen, Druck träge.
+`k.druck` bleibt die eingestellte Feuerstufe (Befehl DRUCK), neu ist `k.dampf` (Tausendstel-Stufen),
+aus dem der Schub gleitend berechnet wird. Brennstoff liegt im normalen Laderaum (wiegt also mit);
+Bruchteile eines kg sammelt `k.feuerG`. Kein automatischer Wechsel: leer = Feuer aus.
+Die Uhrzeit ist kein eigenes Feld, sondern folgt aus `state.tick` (weniger Zustand, gleiches Ergebnis
+auf allen Rechnern). Außentemperatur wird nur berechnet; `k.waerme` ist Zustand, weil sie träge ist.
+Fahrtests setzen den Dampf direkt (warmer Kessel), damit sie weiter nur die Physik prüfen.
+Zustand v7, Replay neu aufgenommen.
+
+## E-016 Dampfvorrat, Verbrauch nach Dampf, zwei Lager mit Abwerfen (2026-11-10, Spieltest M4a)
+Nutzerwunsch: Wer mehr Leistung verlangt, als der Kessel hergibt, soll den Druck fallen sehen (statt
+zitternder Nadel), damit man zwischen „langsam und sparsam“ und „schnell und verschwenderisch“ wählt.
+Darum ist `k.dampf` ein Vorrat: Feuer füllt (begrenzt durch die Feuerstufe), Maschine entnimmt
+Schub × Tempo; der höchste Schub hängt am Druck. Weil der Widerstand mit dem Tempo wächst, kostet
+ein km bei Volldampf fast das Dreifache wie bei „Schwach“. Die Heizer legen nur nach, was gebraucht
+wird (Nutzerentscheidung) — im Stand mit vollem Kessel brennt nur die Glut. `hoechstTempo`,
+`kesselUeberlastet` und das Zittern sind entfernt.
+Lager: Nutzerwunsch Brennstofflager 100 t + Warenlager (Nutzerwahl 60 t), Holz passt in beide.
+`k.ladung` ist durch `k.lager` ersetzt (`sim/koloss/lager.js` als einzige Stelle). Abgeworfenes wird
+ein Haufen im Zustand (`state.abwuerfe`, Index = ID, leere bleiben mit kg 0), den jeder wieder
+aufnehmen kann — vorbereitet für Multiplayer. Zustand v8, Replay neu.
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige

@@ -16,10 +16,16 @@ import { kamera, weltZuBild } from './kamera.js';
 import { LICHT_REICHWEITE_M, LICHT_KEGEL_GRAD, LICHT_TAG_DECKKRAFT, NACHT_FARBE } from '../data/ansicht.js';
 import { LAMPEN, rumpfPunkt } from './koloss-mass.js';
 
-/** Wie dunkel es gerade ist: 0 = heller Tag, 1 = tiefe Nacht. Nur Darstellung. */
-export const ansichtLicht = { nacht: 0 };
+/**
+ * Wie dunkel es gerade ist: 0 = heller Tag, 1 = tiefe Nacht. Nur Darstellung — render/zeichnen.js
+ * setzt `nacht` jedes Bild aus der Tageszeit (M4a). `vorgabe` (Konsole `ek.nacht(x)`) geht vor.
+ */
+export const ansichtLicht = { nacht: 0, vorgabe: /** @type {number | null} */ (null) };
 
 /** @typedef {{x: number, y: number, h: number}} Lage */
+
+/** Auflösung der Dunkel-Ebene relativ zum Bildschirm. */
+const DUNKEL_AUFLOESUNG = 0.5;
 
 /** Eigene Zeichenfläche für die Dunkelheit (Löcher für das Licht werden hineingeschnitten). */
 let dunkel = /** @type {HTMLCanvasElement | null} */ (null);
@@ -46,7 +52,10 @@ export function lichtkegelZeichnen(ctx, rumpfe) {
  */
 export function dunkelheitZeichnen(ctx, alle, mitLicht) {
   if (ansichtLicht.nacht <= 0) return;
-  const dpr = window.devicePixelRatio || 1;
+  // Halbe Auflösung (wie der Rauch): Die Dunkelheit ist weich, man sieht keinen Unterschied.
+  // WARUM: Nutzer hatte nachts nur 16 Bilder/s — eine bildschirmgroße Fläche mit Verläufen und
+  // „destination-out“ in voller Auflösung kostet die Grafikkarte viel (Spieltest M4a).
+  const dpr = (window.devicePixelRatio || 1) * DUNKEL_AUFLOESUNG;
   if (!dunkel) dunkel = document.createElement('canvas');
   const w = Math.round(kamera.breite * dpr), h = Math.round(kamera.hoehe * dpr);
   if (dunkel.width !== w || dunkel.height !== h) { dunkel.width = w; dunkel.height = h; }

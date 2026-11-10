@@ -3,7 +3,8 @@
  * tastatur.js — Übersetzt Tasten in Befehle.
  *
  * ZWECK:    W/S (↑/↓) → TELEGRAF eine Stellung vor/zurück (Maschinentelegraf, Spieltest M2b),
- *           A/D (←/→) → STEUERN (nur wenn sich etwas ändert), Q/E → DRUCK, L → LICHT, dazu Pause,
+ *           A/D (←/→) → STEUERN (nur wenn sich etwas ändert), Q/E → DRUCK, L → LICHT, B → BRENNSTOFF, O → HEIZUNG, I → Lager-Popup,
+ *           dazu Pause,
  *           Spieltempo, Zoom und Kamera. Die Tastatur schreibt NIE in den Zustand, sie schickt nur Befehle
  *           an die Verbindung — genau wie später übers Netz.
  * LIEST:    Tastaturereignisse, Zustand (eigener Koloss) über die Verbindung
@@ -15,10 +16,11 @@
  */
 
 import { kolossVon } from '../sim/abfragen.js';
-import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF } from '../data/koloss.js';
+import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF, BRENNSTOFFE } from '../data/koloss.js';
 import { TEMPI } from '../data/takt.js';
 import { kamera, zoomen } from '../render/kamera.js';
 import { ZOOM_SCHRITT } from '../data/ansicht.js';
+import { lagerUmschalten } from '../ui/lager.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -47,6 +49,9 @@ export function tastaturEinrichten(spielHolen, hilfeUmschalten) {
     switch (ev.code) {
       case 'KeyQ': druckAendern(spiel, -1); break;
       case 'KeyL': lichtUmschalten(spiel); break;
+      case 'KeyB': brennstoffWaehlen(spiel, null); break;
+      case 'KeyO': heizungUmschalten(spiel); break;
+      case 'KeyI': lagerUmschalten(); break;
       case 'KeyE': druckAendern(spiel, +1); break;
       case 'KeyW': case 'ArrowUp': telegrafSchalten(spiel, +1); break;
       case 'KeyS': case 'ArrowDown': telegrafSchalten(spiel, -1); break;
@@ -150,6 +155,30 @@ export function lichtUmschalten(spiel) {
   const k = kolossVon(v.zustand(), v.spieler);
   if (!k) return;
   v.senden({ art: 'LICHT', spieler: v.spieler, an: k.licht === 0 });
+}
+
+/**
+ * Heizung an Bord an/aus (Taste O oder Klick auf den Ofen in der Anzeige).
+ * @param {Spiel} spiel
+ */
+export function heizungUmschalten(spiel) {
+  const v = spiel.verbindung;
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (!k) return;
+  v.senden({ art: 'HEIZUNG', spieler: v.spieler, an: k.heizung === 0 });
+}
+
+/**
+ * Brennstoff wählen (Wahlschalter in der Anzeige) oder mit B zum nächsten weiterschalten (M4a).
+ * @param {Spiel} spiel
+ * @param {number | null} wahl  Index in BRENNSTOFFE, null = der nächste
+ */
+export function brennstoffWaehlen(spiel, wahl) {
+  const v = spiel.verbindung;
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (!k) return;
+  const ziel = wahl ?? (k.brennstoff + 1) % BRENNSTOFFE.length;
+  if (ziel !== k.brennstoff) v.senden({ art: 'BRENNSTOFF', spieler: v.spieler, wahl: ziel });
 }
 
 /** @param {Spiel} spiel */

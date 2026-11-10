@@ -76,3 +76,44 @@ body { font: 14px/1.4 "Segoe UI", system-ui, sans-serif; color: #e8edf1; user-se
 .ware i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; border: 1px solid rgba(240, 215, 150, 0.6); }
 .ware b { color: #e8edf1; font-weight: 500; }
 .ware.leer { opacity: 0.45; }
+
+/* Brennstoff-Wahlschalter (M4a): drei Messingknöpfe, der gewählte gedrückt und glühend. */
+.wahl { display: inline-flex; margin-left: auto; border: 1px solid #3a240c; border-radius: 3px; overflow: hidden; }
+.wahl button {
+  padding: 1px 7px; border: none; border-left: 1px solid #3a240c; cursor: pointer;
+  font: 600 11px/1.4 Georgia, "Times New Roman", serif; color: #2a1806;
+  background: linear-gradient(180deg, #f0d48e, #c08f3e 60%, #93652a);
+}
+.wahl button:first-child { border-left: none; }
+.wahl button.an { background: linear-gradient(180deg, #8a5a22, #c9852f); color: #fff1cf; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(255, 150, 40, 0.7); }
+.wahl button.leer { opacity: 0.5; }
+.uhr { font: 600 13px/1.4 Georgia, "Times New Roman", serif; color: #f0d48e; margin-bottom: 4px; }
+
+/* Zwei Lager (Spieltest M4a) und Heizungsschalter neben der Lampe. */
+.lagerzahl { font-size: 12px; min-width: 84px; text-align: right; }
+.beschr.rechts { margin-left: 18px; }
+
+/* Lager-Popup neben dem Koloss (ui/lager.js, Spieltest M4a). */
+.lagerpopup { width: 250px; padding: 8px 12px 10px; font-size: 12px; z-index: 2; }
+.lagerpopup .kopf { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+  font: 600 14px Georgia, "Times New Roman", serif; color: #f0d48e; }
+.lagerpopup .zu { border: none; background: none; color: #a9b6c2; font-size: 18px; cursor: pointer; line-height: 1; }
+.lagerblock { margin: 6px 0 8px; }
+.lagerblock .titel { display: flex; justify-content: space-between; color: #e0a46c; margin-bottom: 3px; }
+.lagerblock .ladebalken { display: block; height: 7px; margin-bottom: 4px; }
+.lagerblock .ladebalken span { display: block; height: 100%; width: 0; background: linear-gradient(180deg, #f0d48e, #b07a33); }
+.warezeile { display: flex; align-items: center; gap: 6px; min-height: 22px; }
+.warezeile i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(240, 215, 150, 0.6); }
+.warezeile .name { flex: 1; color: #a9b6c2; }
+.warezeile b { font-weight: 500; min-width: 48px; text-align: right; }
+.warezeile.leer { opacity: 0.5; }
+.warezeile button, .lagerpopup .holzziel button {
+  border: 1px solid #3a240c; border-radius: 3px; cursor: pointer; padding: 0 6px; height: 18px;
+  font: 600 12px/1 Georgia, "Times New Roman", serif; color: #2a1806;
+  background: linear-gradient(180deg, #f0d48e, #c08f3e 60%, #93652a);
+}
+.lagerpopup .holzziel { display: flex; align-items: center; gap: 6px; color: #a9b6c2; }
+.lagerpopup .holzziel .wahl { margin-left: auto; }
+.lagerpopup .holzziel .wahl button { border: none; border-left: 1px solid #3a240c; border-radius: 0; font-size: 11px; }
+.lagerpopup .holzziel .wahl button:first-child { border-left: none; }
+.lagerpopup .holzziel .wahl button.an { background: linear-gradient(180deg, #8a5a22, #c9852f); color: #fff1cf; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(255, 150, 40, 0.7); }

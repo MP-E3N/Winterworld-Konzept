@@ -19,20 +19,34 @@
  * @property {number} vy        Tempo in y (µm/Tick)
  * @property {number} h         Fahrtrichtung (0 … 65535, 0 = Osten, im Uhrzeigersinn)
  * @property {number} dreh      aktuelle Drehgeschwindigkeit (Winkel pro Tick)
- * @property {number} druck     Kesseldruck-Stufe (Index in DRUCKSTUFEN)
+ * @property {number} druck     eingestellte Feuerstufe (Index in DRUCKSTUFEN; Befehl DRUCK)
+ * @property {number} dampf     Dampfvorrat im Kessel (0 … DAMPF_MAX, eine Manometer-Stufe = DAMPF_JE_STUFE);
+ *                              das Feuer füllt ihn, die Maschine leert ihn (Spieltest M4a)
+ * @property {number} brennstoff gewählter Brennstoff (Index in data/koloss.js BRENNSTOFFE)
+ * @property {number} feuerMg    angefangenes kg Brennstoff (Milligramm, 0 … 999 999)
+ * @property {number} heizung   Heizung an Bord: 1 = an (kostet Brennstoff), 0 = aus
+ * @property {number} waerme     Wärme an Bord (Zehntel °C)
  * @property {number} gas       −100 … 100 Handgas (letzter STEUERN-Befehl; ≠ 0 übersteuert den Telegrafen)
  * @property {number} lenkung   −100 … 100 (+ = rechts)
  * @property {number} telegraf  Stellung des Maschinentelegrafen (Index in TELEGRAF, data/koloss.js)
  * @property {number} antrieb   tatsächlich wirkendes Gas im letzten Tick (−100 … 100; vom Telegrafen geregelt)
  * @property {number} licht     Scheinwerfer: 1 = an, 0 = aus (Spielzustand, weil später Sicht und
  *                              Mitspieler davon abhängen)
- * @property {Ladung} ladung    Laderaum (kg je Ware, M3)
+ * @property {Lager} lager     zwei Lager (kg je Ware), siehe data/fundstellen.js LAGER
+ * @property {number} holzZiel  wohin neu geborgenes Holz kommt (0 = Brennstofflager, 1 = Warenlager)
  * @property {number} trupp     ID seines Bergungstrupps (Index in state.trupps)
  */
 
 /**
- * Laderaum: kg je Ware (Reihenfolge und Namen in data/fundstellen.js WAREN).
- * @typedef {{kohle: number, holz: number, oel: number, nahrung: number}} Ladung
+ * Die zwei Lager (Spieltest M4a): Brennstoff (daraus heizt der Kessel) und Waren.
+ * @typedef {{brennstoff: {kohle: number, holz: number, oel: number}, waren: {holz: number, nahrung: number}}} Lager
+ */
+
+/**
+ * Abgeworfene Ware auf der Karte (Spieltest M4a). Kann wieder geborgen werden — auch von anderen.
+ * Index = ID; leere Haufen bleiben mit kg 0 stehen (Liste ohne Löcher, CLAUDE.md Regel 4).
+ * @typedef {{id: number, ware: 'kohle' | 'holz' | 'oel' | 'nahrung', x: number, y: number, kg: number, menge: number}} Abwurf
+ *          x, y in µm; kg = was noch daliegt; menge = größte Menge (für die Größe des Haufens)
  */
 
 /**
@@ -41,7 +55,8 @@
  * @typedef {Object} Trupp
  * @property {number} id          Index in state.trupps
  * @property {number} koloss      ID des Kolosses, zu dem er gehört
- * @property {number} fund        ID der Fundstelle, an der er arbeitet; −1 = wartet an Bord
+ * @property {number} fund        ID der Fundstelle, an der er arbeitet; −1 = keine
+ * @property {number} abwurf      ID des Abwurfs, den er aufnimmt; −1 = keiner (beide −1 = an Bord)
  * @property {number} leute       Anzahl Leute
  * @property {number} fortschritt Mann-Ticks am aktuellen Stück (data/fundstellen.js FUNDARTEN.arbeit)
  */
@@ -82,6 +97,7 @@
  * @property {Koloss[]} kolosse
  * @property {Trupp[]} trupps
  * @property {Geborgen[]} geborgen
+ * @property {Abwurf[]} abwuerfe
  */
 
 /**
@@ -94,7 +110,15 @@
  * @typedef {{art: 'LICHT', spieler: number, an: boolean}} BefehlLicht  Scheinwerfer an/aus
  * @typedef {{art: 'BERGEN_START', spieler: number, fund: number}} BefehlBergenStart  fund = ID der Fundstelle
  * @typedef {{art: 'BERGEN_ABBRECHEN', spieler: number}} BefehlBergenAbbrechen
- * @typedef {BefehlBeitreten | BefehlSteuern | BefehlDruck | BefehlTelegraf | BefehlLicht | BefehlBergenStart | BefehlBergenAbbrechen} Befehl
+ * @typedef {{art: 'BRENNSTOFF', spieler: number, wahl: number}} BefehlBrennstoff  wahl = Index in BRENNSTOFFE
+ * @typedef {{art: 'HEIZUNG', spieler: number, an: boolean}} BefehlHeizung
+ * @typedef {{art: 'ABWERFEN', spieler: number, lager: number, ware: string, kg: number}} BefehlAbwerfen  lager = Index in LAGER
+ * @typedef {{art: 'UMLAGERN', spieler: number, nach: number, kg: number}} BefehlUmlagern  Holz ins Lager „nach“
+ * @typedef {{art: 'HOLZZIEL', spieler: number, lager: number}} BefehlHolzziel
+ * @typedef {{art: 'AUFNEHMEN', spieler: number, abwurf: number}} BefehlAufnehmen  Abwurf wieder bergen
+ * @typedef {BefehlBeitreten | BefehlSteuern | BefehlDruck | BefehlTelegraf | BefehlLicht | BefehlBergenStart
+ *   | BefehlBergenAbbrechen | BefehlBrennstoff | BefehlHeizung | BefehlAbwerfen | BefehlUmlagern | BefehlHolzziel
+ *   | BefehlAufnehmen} Befehl
  */
 
 /**

@@ -14,6 +14,8 @@ import { kolossVon, laengsTempo, querTempo, alsKmh, alsMeter } from '../sim/abfr
 import { untergrundAn } from '../sim/welt/untergrund.js';
 import { UNTERGRUND } from '../data/untergrund.js';
 import { kamera } from '../render/kamera.js';
+import { ladungKg } from '../sim/koloss/lager.js';
+import { uhrzeit, tagNummer, dunkelheit } from '../sim/wetter/tag.js';
 import { optikZahlen } from '../render/spuren.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
@@ -64,7 +66,9 @@ export function overlayAktualisieren(el, spiel, dtMs) {
     `Kamera    ${kamera.zoom.toFixed(2)} px/m  ${kamera.folgen ? 'folgt' : 'frei'}`,
     `Optik     ${o.spurpunkte} Spurpunkte, ${o.russ} Ruß, ${o.teilchen} Teilchen`,
     `Wind      ${(s.wetter.windStaerke / 10).toFixed(1)} m/s → ${((s.wetter.windRichtung / 65536) * 360).toFixed(0)}°  (Ziel ${((s.wetter.zielRichtung / 65536) * 360).toFixed(0)}°, Wechsel bei Tick ${s.wetter.naechsterWechsel})`,
-    k ? `Trupp     Fund ${s.trupps[k.trupp].fund}  Fortschritt ${s.trupps[k.trupp].fortschritt}  Ladung ${(Object.values(k.ladung).reduce((a, b) => a + b, 0) / 1000).toFixed(1)} t` : '',
+    k ? `Trupp     Fund ${s.trupps[k.trupp].fund}  Fortschritt ${s.trupps[k.trupp].fortschritt}  Abwurf ${s.trupps[k.trupp].abwurf}  Ladung ${(ladungKg(k) / 1000).toFixed(1)} t` : '',
+    k ? `Kessel    Feuer ${k.druck}  Dampf ${k.dampf}  Glut ${Math.floor(k.feuerMg / 1000)} g  Heizung ${k.heizung}  Brennstoff ${k.brennstoff}  an Bord ${(k.waerme / 10).toFixed(1)} °C` : '',
+    `Uhr       Tag ${tagNummer(s.tick)}  ${Math.floor(uhrzeit(s.tick) / 60)}:${String(uhrzeit(s.tick) % 60).padStart(2, '0')}  Dunkel ${dunkelheit(s.tick)}`,
     `Befehle   ${v.protokoll().length} aufgezeichnet`,
   ].join('\n');
 }

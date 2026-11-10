@@ -74,5 +74,9 @@ Datei < 300 Zeilen (harte Grenze 400), Funktion < 50 Zeilen. Erst suchen, dann s
   Bilder/s im Rußfeld). Dauerhaftes (Dreck, Abdrücke) einmal in Welt-Kacheln einbrennen
   (`render/schmutz.js` `stempeln()`), große weiche Teilchen (Rauch) in halber Auflösung malen.
   Leistung in der VERSTECKTEN Vorschau schwankt stark — mehrmals messen, Tendenz zählt.
+- **Patch-Skripte (Ersetzen per Node) nie zweimal laufen lassen** — und „schon erledigt?“ nicht mit
+  `text.includes(neu)` prüfen, wenn der neue Text den alten enthält: Dann wird beim zweiten Lauf
+  verdoppelt (Spieltest M4a: doppelte Imports und Konstanten in render/zeichnen.js und data/ansicht.js).
+  Lange Skripte als Datei mit dem Write-Werkzeug anlegen — sehr lange Heredocs in Git-Bash scheitern.
 - **Das Tempo dreht nicht mit dem Bug mit** (`sim/koloss/fahren.js` Schritt 5). Wer das „repariert“,
   macht Eis so griffig wie Schnee. Der Test „auf Eis folgt die Bewegung der Lenkung kaum“ fängt das.

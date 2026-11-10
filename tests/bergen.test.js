@@ -12,9 +12,9 @@ import { befehlAnwenden, befehlPruefen } from '../sim/befehle.js';
 import { tickAusfuehren } from '../sim/tick.js';
 import { fundstelleInZelle, fundstelleMitId, fundstellenImBereich, fundId } from '../sim/welt/fundstellen.js';
 import { untergrundAn } from '../sim/welt/untergrund.js';
-import { fundRest, ladungKg, hoechstTempo, truppVon } from '../sim/abfragen.js';
+import { fundRest, truppVon } from '../sim/abfragen.js';
 import { PACKSCHNEE, PULVERSCHNEE } from '../data/untergrund.js';
-import { FUNDARTEN, OELFAESSER, LADERAUM_KG, START_ABSTAND_M, OEL_AB_M } from '../data/fundstellen.js';
+import { FUNDARTEN, OELFAESSER, LAGER, START_ABSTAND_M, OEL_AB_M } from '../data/fundstellen.js';
 import { UM_PRO_METER, TELEGRAF_STOPP } from '../data/koloss.js';
 
 const M = UM_PRO_METER;
@@ -29,6 +29,18 @@ const RUINE = fundId(-1, 0);
  */
 function funde(seed, halbM) {
   return fundstellenImBereich(seed, -halbM * M, -halbM * M, halbM * M, halbM * M);
+}
+
+/**
+ * Testwelt mit leeren Lagern bis auf 5 t Holz, und die Heizer verfeuern Holz — so zählt in
+ * diesen Tests nur, was geborgen wird (seit M4a verbrennt der Kessel Kohle aus dem Brennstofflager).
+ * NUR in Tests: setzt Zustand direkt.
+ */
+function bergewelt() {
+  const w = testwelt();
+  w.k.lager = { brennstoff: { kohle: 0, holz: 5000, oel: 0 }, waren: { holz: 0, nahrung: 0 } };
+  w.k.brennstoff = 1;
+  return w;
 }
 
 /**
@@ -89,53 +101,53 @@ test('Bergen: abgelehnt bei Fahrt, Telegraf nicht auf Stopp, außer Reichweite o
 });
 
 test('Bergen: Stück für Stück in den Laderaum, bis die Fundstelle leer ist; dann wartet der Trupp', () => {
-  const { state, k } = testwelt();
+  const { state, k } = bergewelt();
   const f = /** @type {import('../sim/welt/fundstellen.js').Fundstelle} */ (fundstelleMitId(0, KOHLE));
   const art = FUNDARTEN[f.art];
   pruefe(bergen(state, KOHLE).ok, 'Start');
   const tickJeStueck = Math.ceil(art.arbeit / truppVon(state, k).leute);
   for (let i = 0; i < tickJeStueck - 1; i++) tickAusfuehren(state);
-  gleich(k.ladung.kohle, 0, 'vor dem ersten Stück');
+  gleich(k.lager.brennstoff.kohle, 0, 'vor dem ersten Stück');
   tickAusfuehren(state);
-  gleich(k.ladung.kohle, art.stueckKg, 'erstes Stück');
+  gleich(k.lager.brennstoff.kohle, art.stueckKg, 'erstes Stück');
   gleich(fundRest(state, f), f.menge - art.stueckKg, 'Rest der Fundstelle');
   for (let i = 0; i < tickJeStueck * 40; i++) tickAusfuehren(state);
-  gleich(k.ladung.kohle, f.menge, 'alles geborgen');
+  gleich(k.lager.brennstoff.kohle, f.menge, 'alles geborgen');
   gleich(fundRest(state, f), 0, 'Fundstelle leer');
   gleich(truppVon(state, k).fund, -1, 'Trupp wartet');
   pruefe(befehlPruefen(state, { art: 'BERGEN_START', spieler: 0, fund: KOHLE }) !== null, 'leere Fundstelle erlaubt');
 });
 
 test('Bergen: Losfahren bricht ab, BERGEN_ABBRECHEN auch', () => {
-  const { state, k } = testwelt();
+  const { state, k } = bergewelt();
   pruefe(bergen(state, KOHLE).ok, 'Start');
   fahre(state, {}, 10);
   gleich(truppVon(state, k).fund, KOHLE, 'arbeitet');
   fahre(state, { telegraf: TELEGRAF_STOPP + 1 }, 1);
   gleich(truppVon(state, k).fund, -1, 'nach dem Losfahren');
-  const { state: s2, k: k2 } = testwelt();
+  const { state: s2, k: k2 } = bergewelt();
   pruefe(bergen(s2, KOHLE).ok, 'Start 2');
   pruefe(befehlAnwenden(s2, { art: 'BERGEN_ABBRECHEN', spieler: 0 }).ok, 'Abbrechen');
   fahre(s2, {}, 100);
-  gleich(ladungKg(k2), 0, 'nach Abbruch nichts geborgen');
+  gleich(k2.lager.brennstoff.kohle, 0, 'nach Abbruch nichts geborgen');
 });
 
-test('Bergen: voller Laderaum beendet das Bergen und lässt keinen neuen Auftrag zu', () => {
-  const { state, k } = testwelt();
-  k.ladung.holz = LADERAUM_KG - 600; // nur in Tests: Laderaum fast voll
+test('Bergen: volles Lager beendet das Bergen und lässt keinen neuen Auftrag zu', () => {
+  const { state, k } = bergewelt();
+  k.lager.brennstoff.holz = LAGER[0].kg - 600; // nur in Tests: Brennstofflager fast voll (Holz wird verheizt, aber kaum)
   pruefe(bergen(state, KOHLE).ok, 'Start mit 600 kg frei');
   for (let i = 0; i < 400; i++) tickAusfuehren(state);
-  gleich(k.ladung.kohle, 500, 'nur ein Stück passte');
+  gleich(k.lager.brennstoff.kohle, 500, 'nur ein Stück passte');
   gleich(truppVon(state, k).fund, -1, 'Trupp wartet');
   pruefe(befehlPruefen(state, { art: 'BERGEN_START', spieler: 0, fund: KOHLE }) !== null, 'voller Laderaum erlaubt');
 });
 
-test('Gewicht: voller Laderaum senkt das Höchsttempo, leer bleibt alles wie vorher', () => {
+test('Gewicht: volle Lager machen den Koloss langsamer, fast leer kaum', () => {
   const leer = testwelt(), voll = testwelt();
-  voll.k.ladung.kohle = LADERAUM_KG;
-  pruefe(hoechstTempo(0, voll.k) < hoechstTempo(0, leer.k), 'Höchsttempo mit Ladung nicht kleiner');
-  for (const w of [leer, voll]) { setzeAn(w.k, 0, 0); fahre(w.state, { druck: 4, gas: 100 }, 400); }
+  leer.k.lager = { brennstoff: { kohle: 1000, holz: 0, oel: 0 }, waren: { holz: 0, nahrung: 0 } };
+  voll.k.lager = { brennstoff: { kohle: LAGER[0].kg, holz: 0, oel: 0 }, waren: { holz: 0, nahrung: LAGER[1].kg } };
+  for (const w of [leer, voll]) { setzeAn(w.k, 0, 2000, 0); fahre(w.state, { druck: 4, gas: 100 }, 400); }
   const v = (/** @type {import('../sim/types.js').Koloss} */ k) => Math.hypot(k.vx, k.vy);
-  pruefe(v(voll.k) < v(leer.k) * 0.9, `beladen ${v(voll.k)} vs. leer ${v(leer.k)}`);
-  pruefe(v(voll.k) > v(leer.k) * 0.6, 'beladen viel zu langsam');
+  pruefe(v(voll.k) < v(leer.k) * 0.85, `beladen ${v(voll.k)} vs. leer ${v(leer.k)}`);
+  pruefe(v(voll.k) > v(leer.k) * 0.5, 'beladen viel zu langsam');
 });

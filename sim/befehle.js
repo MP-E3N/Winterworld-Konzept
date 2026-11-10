@@ -6,7 +6,8 @@
  *           ob ein Befehl erlaubt ist, und dann der Zustand geändert. So kann der Server später
  *           jeden Befehl genauso prüfen wie das Einzelspiel.
  * LIEST:    state.spieler, state.kolosse, data/koloss.js
- * SCHREIBT: state.spieler, state.kolosse (Steuerwerte, Druck, Telegraf, Licht), state.trupps (Auftrag)
+ * SCHREIBT: state.spieler, state.kolosse (Steuerwerte, Feuerstufe, Brennstoff, Heizung, Telegraf, Licht);
+ *           Bergen und Lager über sim/befehle-lager.js
  * REGEL:    KONZEPT.md §8 Regel 4, CLAUDE.md Regel 1
  * DEBUG:    Abgelehnte Befehle landen mit Grund in der Konsole (game/spiel.js).
  *           Neuen Befehl? Typ in sim/types.js, Prüfung + Wirkung hier, Test in tests/befehle.test.js.
@@ -14,11 +15,12 @@
 
 import {
   DRUCKSTUFEN, START_DRUCK, START_X, START_Y, START_RICHTUNG, EINGABE_MAX, KOLOSS_BREITE_M, UM_PRO_METER,
-  TELEGRAF, TELEGRAF_STOPP,
+  TELEGRAF, TELEGRAF_STOPP, BRENNSTOFFE, START_KOHLE_KG, START_HOLZ_KG, DAMPF_MAX,
 } from '../data/koloss.js';
-import { kolossVon, kolossSteht, inReichweite, fundRest, ladungFrei, truppVon } from './abfragen.js';
-import { fundstelleMitId } from './welt/fundstellen.js';
-import { FUNDARTEN, TRUPP_LEUTE } from '../data/fundstellen.js';
+import { kolossVon } from './abfragen.js';
+import { istLagerBefehl, lagerBefehlPruefen, lagerBefehlAnwenden, ganzImBereich } from './befehle-lager.js';
+import { TRUPP_LEUTE, BRENNSTOFFLAGER } from '../data/fundstellen.js';
+import { START_WAERME } from '../data/klima.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 /** @typedef {import('./types.js').Befehl} Befehl */
@@ -60,8 +62,15 @@ export function befehlPruefen(state, b) {
     if (typeof b.an !== 'boolean') return 'an muss ja/nein sein';
     return null;
   }
-  if (b.art === 'BERGEN_START') return bergenPruefen(state, b);
-  if (b.art === 'BERGEN_ABBRECHEN') return null;
+  if (b.art === 'HEIZUNG') {
+    if (typeof b.an !== 'boolean') return 'an muss ja/nein sein';
+    return null;
+  }
+  if (istLagerBefehl(b)) return lagerBefehlPruefen(state, b, /** @type {import('./types.js').Koloss} */ (kolossVon(state, b.spieler)));
+  if (b.art === 'BRENNSTOFF') {
+    if (!ganzImBereich(b.wahl, 0, BRENNSTOFFE.length - 1)) return 'unbekannter Brennstoff';
+    return null;
+  }
   return 'unbekannter Befehl';
 }
 
@@ -84,10 +93,13 @@ export function befehlAnwenden(state, b) {
       id, besitzer: b.spieler, name: b.name,
       x: START_X + versatz, y: START_Y, vx: 0, vy: 0, h: START_RICHTUNG, dreh: 0,
       druck: START_DRUCK, gas: 0, lenkung: 0, telegraf: TELEGRAF_STOPP, antrieb: 0, licht: 0,
-      ladung: { kohle: 0, holz: 0, oel: 0, nahrung: 0 }, trupp,
+      // Voller Kessel beim Start, etwas Brennstoff an Bord (M4a).
+      dampf: DAMPF_MAX, brennstoff: 0, feuerMg: 0, heizung: 0, waerme: START_WAERME,
+      lager: { brennstoff: { kohle: START_KOHLE_KG, holz: START_HOLZ_KG, oel: 0 }, waren: { holz: 0, nahrung: 0 } },
+      holzZiel: BRENNSTOFFLAGER, trupp,
     });
-    // Jeder Koloss hat genau einen Trupp (M3). fund −1 = wartet an Bord.
-    state.trupps.push({ id: trupp, koloss: id, fund: -1, leute: TRUPP_LEUTE, fortschritt: 0 });
+    // Jeder Koloss hat genau einen Trupp (M3). fund/abwurf −1 = wartet an Bord.
+    state.trupps.push({ id: trupp, koloss: id, fund: -1, abwurf: -1, leute: TRUPP_LEUTE, fortschritt: 0 });
     state.spieler.push({ id: b.spieler, name: b.name, koloss: id });
     return { ok: true };
   }
@@ -102,43 +114,12 @@ export function befehlAnwenden(state, b) {
     k.telegraf = b.stufe;
   } else if (b.art === 'LICHT') {
     k.licht = b.an ? 1 : 0; // Ganzzahl im Zustand (CLAUDE.md Regel 3)
-  } else if (b.art === 'BERGEN_START') {
-    // Ein laufender Auftrag wird ersetzt; das angefangene Stück ist verloren.
-    const t = truppVon(state, k);
-    t.fund = b.fund;
-    t.fortschritt = 0;
-  } else if (b.art === 'BERGEN_ABBRECHEN') {
-    const t = truppVon(state, k);
-    t.fund = -1;
-    t.fortschritt = 0;
+  } else if (b.art === 'HEIZUNG') {
+    k.heizung = b.an ? 1 : 0;
+  } else if (b.art === 'BRENNSTOFF') {
+    k.brennstoff = b.wahl;
+  } else if (istLagerBefehl(b)) {
+    lagerBefehlAnwenden(state, b, k);
   }
   return { ok: true };
-}
-
-/**
- * Darf der Trupp an dieser Fundstelle bergen? (Spec M3: nur im Stand, in Reichweite, nicht leer,
- * Platz im Laderaum.)
- * @param {Zustand} state
- * @param {import('./types.js').BefehlBergenStart} b
- * @returns {string | null}
- */
-function bergenPruefen(state, b) {
-  const k = /** @type {import('./types.js').Koloss} */ (kolossVon(state, b.spieler));
-  const f = typeof b.fund === 'number' ? fundstelleMitId(state.seed, b.fund) : null;
-  if (!f) return 'keine Fundstelle';
-  if (fundRest(state, f) <= 0) return 'Fundstelle ist leer';
-  if (!kolossSteht(k)) return 'Koloss steht nicht (Telegraf auf Stopp)';
-  if (!inReichweite(k, f.x, f.y)) return 'Fundstelle außer Reichweite';
-  if (ladungFrei(k) < FUNDARTEN[f.art].stueckKg) return 'Laderaum voll';
-  return null;
-}
-
-/**
- * @param {unknown} wert
- * @param {number} min
- * @param {number} max
- * @returns {boolean}
- */
-function ganzImBereich(wert, min, max) {
-  return typeof wert === 'number' && Number.isInteger(wert) && wert >= min && wert <= max;
 }
