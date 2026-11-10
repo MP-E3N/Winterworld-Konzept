@@ -2,7 +2,7 @@
 /**
  * main.js — Startpunkt im Browser: baut alles zusammen und startet die Bildschleife.
  *
- * ZWECK:    Verbindung (Einzelspiel), Spielschleife, Kamera, Tastatur, Anzeige und Debug
+ * ZWECK:    Verbindung (Einzelspiel), Spielschleife, Kamera, Tastatur, Maus, Anzeige und Debug
  *           verdrahten. Enthält selbst keine Spielregeln.
  * LIEST:    index.html (#welt, #hud, #debug, #hilfe)
  * SCHREIBT: —
@@ -17,6 +17,8 @@ import { optikZuruecksetzen } from './render/spuren.js';
 import { schneetreibenZuruecksetzen } from './render/wind.js';
 import { weltZuruecksetzen } from './render/welt.js';
 import { tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, telegrafSetzen, lichtUmschalten } from './eingabe/tastatur.js';
+import { mausEinrichten } from './eingabe/maus.js';
+import { fundstellenZuruecksetzen } from './render/fundstellen.js';
 import { anzeigeAufbauen, anzeigeAktualisieren } from './ui/anzeige.js';
 import { overlayEinrichten, overlayAktualisieren } from './debug/overlay.js';
 import { konsoleEinrichten } from './debug/konsole.js';
@@ -43,6 +45,7 @@ function neueWelt(seed) {
   optikZuruecksetzen();
   schneetreibenZuruecksetzen();
   weltZuruecksetzen();
+  fundstellenZuruecksetzen();
   tastaturZuruecksetzen();
   kamera.folgen = true;
   kamera.zoomZiel = ZOOM_START;
@@ -68,6 +71,7 @@ groesseAnpassen();
 window.addEventListener('resize', groesseAnpassen);
 kameraEinrichten(canvas);
 tastaturEinrichten(() => spiel, hilfeUmschalten);
+mausEinrichten(canvas, () => spiel);
 anzeigeAufbauen(hud, { telegraf: (stufe) => telegrafSetzen(spiel, stufe), licht: () => lichtUmschalten(spiel) });
 overlayEinrichten(debugEl);
 konsoleEinrichten(() => spiel, neueWelt);

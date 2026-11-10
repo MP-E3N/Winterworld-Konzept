@@ -5,7 +5,7 @@
  * ZWECK:    Aus Gas, Lenkung, Kesseldruck und Untergrund das neue Tempo, die neue Richtung und
  *           die neue Position berechnen. Schwer und träge: langsames Anfahren, langer Bremsweg,
  *           auf Eis rutscht der Koloss seitlich weg.
- * LIEST:    k.gas, k.lenkung, k.druck, k.telegraf, Untergrund an der Position (Seed), data/koloss.js
+ * LIEST:    k.gas, k.lenkung, k.druck, k.telegraf, k.ladung (Gewicht bremst, M3), Untergrund an der Position (Seed), data/koloss.js
  * SCHREIBT: k.x, k.y, k.vx, k.vy, k.h, k.dreh, k.antrieb
  * REGEL:    KONZEPT.md §3 „Fahrgefühl“, CLAUDE.md Regeln 2+3 (nur Ganzzahlen)
  * DEBUG:    F3 zeigt Längs-/Quertempo und Untergrund. Zum Nachstellen: `ek.step(n)` und
@@ -28,6 +28,7 @@ import {
 import { UNTERGRUND } from '../../data/untergrund.js';
 import { untergrundAn } from '../welt/untergrund.js';
 import { bewegenMitKollision } from './kollision.js';
+import { schubMitLadung } from '../abfragen.js';
 import { cosW, sinW, teile, winkelNorm, klemme, TRIG_EINS } from '../lib/winkel.js';
 
 /** @typedef {import('../types.js').Koloss} Koloss */
@@ -109,7 +110,8 @@ function drehSchritt(rest) {
 function wirksamesGas(k, laengs, zug, widerstand) {
   if (k.gas !== 0) return k.gas;
   const ziel = TELEGRAF[k.telegraf].kmh * TEMPO_EIN_KMH; // µm/Tick, < 0 = rückwärts
-  const schub = ziel >= 0 ? SCHUB[k.druck] : (k.druck > 0 ? SCHUB_RUECKWAERTS : 0);
+  // Mit Ladung: weniger Schub (M3) — die Vorsteuerung muss das wissen, sonst hält sie das Tempo nicht.
+  const schub = schubMitLadung(k, ziel >= 0 ? SCHUB[k.druck] : (k.druck > 0 ? SCHUB_RUECKWAERTS : 0));
   const halten = schub === 0 || zug === 0 ? 0
     : teile(Math.abs(ziel) * widerstand * EINGABE_MAX * 100, 4096 * schub * zug);
   const korrektur = teile((ziel - laengs) * TELEGRAF_KORREKTUR, TEMPO_EIN_KMH);
@@ -131,7 +133,7 @@ function wirksamesGas(k, laengs, zug, widerstand) {
 function laengsBeschleunigung(k, laengs, zug, bremsen) {
   const gas = k.antrieb;
   if (gas > 0) {
-    return teile(teile(SCHUB[k.druck] * gas, EINGABE_MAX) * zug, 100);
+    return teile(teile(schubMitLadung(k, SCHUB[k.druck]) * gas, EINGABE_MAX) * zug, 100);
   }
   if (gas < 0 && laengs > 0) {
     // S während der Vorwärtsfahrt = bremsen, aber nie über den Stillstand hinaus.
@@ -140,7 +142,7 @@ function laengsBeschleunigung(k, laengs, zug, bremsen) {
   }
   if (gas < 0) {
     // Rückwärts nur mit Druck im Kessel.
-    return k.druck > 0 ? teile(teile(SCHUB_RUECKWAERTS * gas, EINGABE_MAX) * zug, 100) : 0;
+    return k.druck > 0 ? teile(teile(schubMitLadung(k, SCHUB_RUECKWAERTS) * gas, EINGABE_MAX) * zug, 100) : 0;
   }
   // Kein Gas: ausrollen, ebenfalls nie über den Stillstand hinaus.
   const r = teile(ROLLEN * bremsen, 100);

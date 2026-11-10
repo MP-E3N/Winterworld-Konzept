@@ -26,6 +26,30 @@
  * @property {number} antrieb   tatsächlich wirkendes Gas im letzten Tick (−100 … 100; vom Telegrafen geregelt)
  * @property {number} licht     Scheinwerfer: 1 = an, 0 = aus (Spielzustand, weil später Sicht und
  *                              Mitspieler davon abhängen)
+ * @property {Ladung} ladung    Laderaum (kg je Ware, M3)
+ * @property {number} trupp     ID seines Bergungstrupps (Index in state.trupps)
+ */
+
+/**
+ * Laderaum: kg je Ware (Reihenfolge und Namen in data/fundstellen.js WAREN).
+ * @typedef {{kohle: number, holz: number, oel: number, nahrung: number}} Ladung
+ */
+
+/**
+ * Ein Bergungstrupp (Entscheidung F4): in M3 unsichtbar, nur Ladebalken. Ab M7 bekommt er eine
+ * Position und läuft sichtbar zur Fundstelle — deshalb schon jetzt ein eigenes Objekt.
+ * @typedef {Object} Trupp
+ * @property {number} id          Index in state.trupps
+ * @property {number} koloss      ID des Kolosses, zu dem er gehört
+ * @property {number} fund        ID der Fundstelle, an der er arbeitet; −1 = wartet an Bord
+ * @property {number} leute       Anzahl Leute
+ * @property {number} fortschritt Mann-Ticks am aktuellen Stück (data/fundstellen.js FUNDARTEN.arbeit)
+ */
+
+/**
+ * Änderungsliste der Fundstellen: was von einer angebrochenen Fundstelle noch übrig ist.
+ * Fundstellen ohne Eintrag sind unberührt (KONZEPT §8 R7: Welt = Seed + Änderungen).
+ * @typedef {{fund: number, rest: number}} Geborgen  fund = ID, rest in kg (0 = leer)
  */
 
 /**
@@ -56,6 +80,8 @@
  * @property {Wetter} wetter
  * @property {Spieler[]} spieler
  * @property {Koloss[]} kolosse
+ * @property {Trupp[]} trupps
+ * @property {Geborgen[]} geborgen
  */
 
 /**
@@ -66,7 +92,9 @@
  * @typedef {{art: 'DRUCK', spieler: number, stufe: number}} BefehlDruck
  * @typedef {{art: 'TELEGRAF', spieler: number, stufe: number}} BefehlTelegraf  stufe = Index in TELEGRAF
  * @typedef {{art: 'LICHT', spieler: number, an: boolean}} BefehlLicht  Scheinwerfer an/aus
- * @typedef {BefehlBeitreten | BefehlSteuern | BefehlDruck | BefehlTelegraf | BefehlLicht} Befehl
+ * @typedef {{art: 'BERGEN_START', spieler: number, fund: number}} BefehlBergenStart  fund = ID der Fundstelle
+ * @typedef {{art: 'BERGEN_ABBRECHEN', spieler: number}} BefehlBergenAbbrechen
+ * @typedef {BefehlBeitreten | BefehlSteuern | BefehlDruck | BefehlTelegraf | BefehlLicht | BefehlBergenStart | BefehlBergenAbbrechen} Befehl
  */
 
 /**

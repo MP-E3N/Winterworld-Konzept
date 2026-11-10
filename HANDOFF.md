@@ -9,14 +9,55 @@
    → bei Bedarf `KONZEPT.md` (Spielidee, Bauplan §10, Entscheidungen §11),
    `docs/ENTSCHEIDUNGEN.md` (E-001…E-013), `docs/specs/M2-welt.md`.
 2. **Prüfen:** `powershell -ExecutionPolicy Bypass -File tools\run-tests.ps1` → muss „ALLES GRUEN“
-   melden (60 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
+   melden (68 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
 3. **Spielen:** Vorschau „eiskoloss“ starten (`.claude/launch.json`, Port 5176) →
    http://localhost:5176/. Steuerung hinter dem „?“. Konsole (F12): `ek.…`, z. B. `ek.neu(0)`
    = Testgelände, `ek.step(n)`, `ek.untergrund()`, `ek.kacheln()`, `ek.nacht(0.85)` (Dunkelheit zum
    Testen der Scheinwerfer, `ek.nacht(0)` = Tag), `ek.optik()`. F3 = Messwerte (inkl. Bilder/s).
 4. **git:** Branch `main`, Remote `origin` = https://github.com/MP-E3N/Winterworld-Konzept
    (Repository „Winterworld Konzept“ des Nutzers). Commits: `2ae5d9c` M0+M1 · `2924611` M2 Welt ·
-   `7792e31` HANDOFF · danach **Spieltest M2b** (ein Commit, siehe `git log`).
+   `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · danach **M3 Fundstellen & Bergen** (siehe `git log`).
+
+## Stand 2026-11-10 abends: M3 Fundstellen & Bergen gebaut, getestet und committet (68 Tests grün)
+
+Spieltest M2b hat der Nutzer bestätigt („läuft flüssig, passt“). Seine M3-Entscheidungen: vier
+Fundarten (Kohlehalde, Ruine/Holz, Ölfässer, Vorratslager), **Bergen nur im Stand**, **Nebel später**.
+Spec: `docs/specs/M3-fundstellen.md`, Entscheidung E-014.
+
+- **Fundstellen aus dem Seed** (`sim/welt/fundstellen.js`, Werte `data/fundstellen.js`): eine je
+  200-m-Zelle (30 %, am Start 65 %), nur auf Schnee, nie am Startpunkt, Öl erst ab 1,5 km.
+  ID = gepackte Zellnummer. Seed 0: feste Funde in `data/testgelaende.js` (Kohlehalde 40 m rechts
+  vom Start in Reichweite, Ruine knapp außer Reichweite, Vorratslager SO, Ölfässer NW).
+- **Zustand v6:** `koloss.ladung {kohle, holz, oel, nahrung}` (kg), `koloss.trupp`, `state.trupps[]`
+  (je Koloss einer, `fund -1` = an Bord), `state.geborgen[] {fund, rest}` (Änderungsliste).
+- **Befehle** `BERGEN_START {fund}` (Stopp + steht, ≤ 60 m ab Rumpfmitte, nicht leer, Platz) und
+  `BERGEN_ABBRECHEN`. **Tick** `sim/bergen.js` nach dem Fahren: Stück für Stück in den Laderaum
+  (Kohle 500 kg je 2 s, Holz 250 kg/2 s, Öl 200 kg/3 s, Vorräte 100 kg/1,5 s); Losfahren bricht ab.
+- **Gewicht:** `schubMitLadung()` — bis −25 % Schub bei vollen 60 t; leer exakt wie vorher.
+- **Darstellung** `render/fundstellen.js` + `render/fundstellen-bilder.js` (vorgerenderte Bildchen,
+  4 Varianten je Art, schrumpfen mit dem Rest, leer = blasse Reste; fern farbige Punkte).
+  Maus darüber: Ring (Messing = geht, grau gestrichelt = geht nicht, kurz rot = abgelehnt),
+  Messingschild „Kohlehalde · 6,5 t“, Reichweitenkreis. Beim Bergen Messing-Ladebalken
+  (Bernstein = geborgen, Kupferleiste = aktuelles Stück). `eingabe/maus.js`: Linksklick.
+- **Anzeige** unten links: Ladung (Messingbalken, x / 60 t), vier Waren, Trupp („an Bord“/„birgt …“).
+  Konsole `ek.funde()`, `ek.ladung()`; F3 zeigt den Trupp; Hilfe ergänzt.
+- **Replay neu aufgenommen** (absichtlich: Zustand v6 + Testfahrt birgt zuerst 200 Ticks Kohle).
+- Im Browser geprüft (Seed 0 und 4711): Klick → Bergen → 1,5 t nach 130 Ticks, keine Konsolenfehler,
+  Fundstellen zeichnen ≤ 0,5 ms.
+- Pflege: Grundformen der Bildchen nach `render/fundstellen-formen.js` ausgelagert (alle Dateien < 300).
+- **Nutzer hat M3 getestet** (Screenshot: Bergen an der Kohlehalde, 27,8 t geladen) und Commit +
+  Push freigegeben.
+
+### Nutzerentscheidungen nach M3 (2026-11-10)
+- **Ladung nur in der Anzeige**, nicht am Koloss sichtbar.
+- **F6 Liegenbleiben bestätigt:** Wrack bleibt mit Ladung in der Welt (Fundstelle für andere),
+  Neustart mit einfachem Koloss in der zuletzt besuchten Siedlung.
+- **M4 in Teilen**, zuerst **M4a: Kessel frisst Kohle + Kälte + Tag/Nacht** (Wärme an Bord).
+  Danach M4b Crew (Hunger, Gesundheit, Moral), M4c Eisbruch/Rumpfschaden/Liegenbleiben,
+  M4d erste Siedlung.
+
+### Nächster Schritt
+**M4a** — Spec `docs/specs/M4a-kessel-kaelte.md` (Vorschläge und offene Fragen darin), dann bauen.
 
 ## Stand 2026-11-10 (nach Spieltest M2b, 9 Runden)
 
@@ -35,7 +76,7 @@ Noch keine Spielinhalte (Fundstellen, Bergen, Kälte) — das ist M3/M4.
 | **Leistung** | gemessen (versteckte Vorschau): ~1–3 ms je Bild nah, ~5 ms fern. Nutzer hatte vorher 16 Bilder/s im Rußfeld → behoben (Kacheln, halbe Auflösung). **Vom Nutzer noch nicht bestätigt.** |
 | **Zustand** | Version 5 (`telegraf`, `licht`, Position = Drehpunkt) |
 
-### Nächster Schritt
+### Nächster Schritt (damals — ERLEDIGT, M3 ist gebaut, siehe oben)
 1. **Spieltest durch den Nutzer** abwarten (vor allem: Bildrate im Rußfeld jetzt ok? Funken/Flocken?).
 2. Dann **M3 Fundstellen & Bergen** (KONZEPT.md §4, §7, §10). Spec zuerst
    (`docs/specs/M3-fundstellen.md`), dann bauen. Vorschlag für den Umfang:
@@ -309,7 +350,7 @@ Kurvenradius 32 m bei kleinem Tempo, darüber weiter (Drehen max. 7°/s ab ≈ 1
 schlechte Bremsen, rutscht stark.
 
 ## Offen
-1. **Spieltest M2b bestätigen lassen** (Bildrate, Funken/Flocken), dann **M3 Fundstellen & Bergen** — siehe oben.
+1. **Spieltest M3** durch den Nutzer, Frage „Ladung am Koloss sichtbar?“, dann Commit, dann **M4** — siehe oben.
 2. Repository verbunden (origin = MP-E3N/Winterworld-Konzept). `gh` ist nicht angemeldet — für PRs/Issues
    bei Bedarf `gh auth login` durch den Nutzer.
 3. Fahrgefühl bei Bedarf: Anfahrzeit (`WIDERSTAND_BEZUG`), Lenkung (`WENDE_RADIUS`, `DREH_MAX`, `DREH_ANPASSUNG`),

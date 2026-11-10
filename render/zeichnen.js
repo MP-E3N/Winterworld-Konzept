@@ -1,7 +1,7 @@
 // @ts-check
 /**
- * zeichnen.js — Zeichnet ein ganzes Bild: Boden, Ruß, Spuren, Schneetreiben, Lichtkegel, Kolosse,
- *               Rauch, Dunkelheit.
+ * zeichnen.js — Zeichnet ein ganzes Bild: Boden, Ruß, Spuren, Fundstellen, Schneetreiben, Lichtkegel,
+ *               Kolosse, Rauch, Dunkelheit, Ladebalken/Markierung der Fundstellen.
  *
  * ZWECK:    Reihenfolge der Ebenen an einer Stelle. Einzelne Ebenen stehen in eigenen Dateien.
  * LIEST:    Spiel (Zustand über die Verbindung, Überblendung), Kamera
@@ -18,6 +18,7 @@ import { optikAktualisieren, optikBewegen, spurenZeichnen } from './spuren.js';
 import { schmutzZeichnen } from './schmutz.js';
 import { rauchZeichnen } from './rauch.js';
 import { funkenZeichnen } from './funken.js';
+import { fundstellenZeichnen, fundMarkenZeichnen } from './fundstellen.js';
 import { windVektor, schneetreibenAktualisieren, schneetreibenZeichnen } from './wind.js';
 import { lageZumZeichnen } from '../game/spiel.js';
 import { kolossVon } from '../sim/abfragen.js';
@@ -57,6 +58,7 @@ export function bildZeichnen(ctx, spiel, dtMs) {
   bodenZeichnen(ctx, s.seed);
   schmutzZeichnen(ctx);
   spurenZeichnen(ctx);
+  fundstellenZeichnen(ctx, s);
   schneetreibenZeichnen(ctx);
   const mitLicht = rumpfe.filter((_, i) => s.kolosse[i].licht === 1);
   lichtkegelZeichnen(ctx, mitLicht);
@@ -68,4 +70,6 @@ export function bildZeichnen(ctx, spiel, dtMs) {
   funkenZeichnen(ctx);
   rumpfe.forEach((r, i) => feuerscheinZeichnen(ctx, r, lasten[i]));
   dunkelheitZeichnen(ctx, rumpfe, mitLicht);
+  // Ladebalken und Maus-Markierung über der Dunkelheit — man soll sie auch nachts sehen.
+  fundMarkenZeichnen(ctx, s, v.spieler, eigener ? rumpfe[eigener.id] : null);
 }

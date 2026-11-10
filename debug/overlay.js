@@ -64,6 +64,7 @@ export function overlayAktualisieren(el, spiel, dtMs) {
     `Kamera    ${kamera.zoom.toFixed(2)} px/m  ${kamera.folgen ? 'folgt' : 'frei'}`,
     `Optik     ${o.spurpunkte} Spurpunkte, ${o.russ} Ruß, ${o.teilchen} Teilchen`,
     `Wind      ${(s.wetter.windStaerke / 10).toFixed(1)} m/s → ${((s.wetter.windRichtung / 65536) * 360).toFixed(0)}°  (Ziel ${((s.wetter.zielRichtung / 65536) * 360).toFixed(0)}°, Wechsel bei Tick ${s.wetter.naechsterWechsel})`,
+    k ? `Trupp     Fund ${s.trupps[k.trupp].fund}  Fortschritt ${s.trupps[k.trupp].fortschritt}  Ladung ${(Object.values(k.ladung).reduce((a, b) => a + b, 0) / 1000).toFixed(1)} t` : '',
     `Befehle   ${v.protokoll().length} aufgezeichnet`,
   ].join('\n');
 }

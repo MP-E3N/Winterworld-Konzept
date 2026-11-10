@@ -10,8 +10,8 @@ Crew und Rumpf am Leben — allein oder später mit 2–4 anderen Kolossen in de
 (Koop + Konkurrenz, kein Kampf). Eigene Welt im Stil des Frostpunk-Genres, aber ohne dessen
 Namen, Lore oder Grafik.
 
-**Stand 2026-11-10:** M0 Gerüst, M1 Fahren und M2 Welt sind gebaut und spielbar.
-Nächster Meilenstein: **M3 Fundstellen & Bergen**.
+**Stand 2026-11-10:** M0 Gerüst, M1 Fahren, M2 Welt und M3 Fundstellen & Bergen sind gebaut und
+spielbar (M3 noch ohne Nutzer-Spieltest). Nächster Meilenstein: **M4 Überleben**.
 
 ---
 
@@ -22,7 +22,7 @@ Nächster Meilenstein: **M3 Fundstellen & Bergen**.
 | Spielen | Vorschau „eiskoloss“ (`.claude/launch.json`) bzw. `..\serve.ps1 -Port 5176 -Root Eiskoloss` → http://localhost:5176/ |
 | Testen | `powershell -ExecutionPolicy Bypass -File tools\run-tests.ps1` → muss „ALLES GRUEN“ melden |
 | Welt ansehen | `node tools/welt-ansehen.js <seed> [meter]` (Text-Karte) |
-| Konsole (F12) | `ek.neu(0)` Testgelände · `ek.step(n)` · `ek.untergrund()` · `ek.kacheln()` · `ek.nacht(0.85)` · `ek.replay()` |
+| Konsole (F12) | `ek.neu(0)` Testgelände · `ek.step(n)` · `ek.untergrund()` · `ek.kacheln()` · `ek.nacht(0.85)` · `ek.funde()` · `ek.ladung()` · `ek.replay()` |
 
 Nicht über `file://` öffnen (ES-Module brauchen einen Server). Kein Build, keine Installation
 nötig — Node wird nur für Tests gebraucht (später auch für den Server).
@@ -36,6 +36,7 @@ nötig — Node wird nur für Tests gebraucht (später auch für den Server).
 | Q / E | Kesseldruck runter / rauf (5 Stufen; begrenzt, welche Telegrafen-Stellung erreicht wird) |
 | Klick auf den Telegrafen | Hebel direkt auf eine Stellung stellen |
 | L, Klick auf die Öllampe | Scheinwerfer an/aus |
+| Linksklick auf eine Fundstelle | Trupp bergen lassen (nur im Stand, in 60 m Reichweite); nochmal: zurückholen |
 | Mausrad, + / − | Zoom (0,05 … 40 Bildpunkte je Meter) |
 | rechte/mittlere Maustaste ziehen | Karte verschieben |
 | Leertaste | Kamera zurück zum Koloss |
@@ -67,7 +68,7 @@ nötig — Node wird nur für Tests gebraucht (später auch für den Server).
 | ✔ M0 | Gerüst | Takt 20 Hz, Kamera, Tests, Regel-Prüfer |
 | ✔ M1 | Fahren | Fahrphysik, Lenkung, Rutschen, Zoom |
 | ✔ M2 | Welt | Generator, Kollision, Kachel-Darstellung |
-| ▶ M3 | Fundstellen & Bergen | Fundstellen aus dem Seed, Klick → Bergen mit Ladebalken, Laderaum + Gewicht, Sicht/Nebel |
+| ✔ M3 | Fundstellen & Bergen | Fundstellen aus dem Seed, Klick → Bergen mit Ladebalken, Laderaum + Gewicht (Nebel später) |
 | M4 | Überleben | Kohleverbrauch, Kälte, Tag/Nacht, Crew, Eisbruch, Liegenbleiben, erste Siedlung |
 | M5 | Ereignisse | Stürme mit Vorwarnung, Entscheidungen, Reichweiten-Ring, Aufträge |
 | M6 | Multiplayer | Node-Server, WebSocket, 2–4 Spieler, Vorhersage + Korrektur |

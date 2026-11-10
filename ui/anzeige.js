@@ -1,16 +1,19 @@
 // @ts-check
 /**
  * anzeige.js — Anzeigen am Bildrand: Tempo, Dampfmaschine, Kesseldruck, Maschinentelegraf, Wind,
- *              Boden, Maßstab.
+ *              Boden, Laderaum (M3), Trupp, Maßstab.
  *
  * ZWECK:    Das Nötigste zum Fahren, schlicht (Nutzerwunsch aus Kronwege: keine Extra-Fenster,
  *           Bedienhinweise nur hinter „?“).
- * LIEST:    eigener Koloss, Wetter, Verbindung (Pause/Tempo), Kamera, gefahrene Meter
+ * LIEST:    eigener Koloss (auch Ladung und Trupp), Wetter, Verbindung (Pause/Tempo), Kamera, gefahrene Meter
  * SCHREIBT: nur DOM-Elemente in #hud
  * REGEL:    „Aufbauen + Aktualisieren“: Elemente einmal bauen, danach nur Texte setzen.
  */
 
-import { kolossVon, laengsTempo, alsKmh, kesselUeberlastet } from '../sim/abfragen.js';
+import { kolossVon, laengsTempo, alsKmh, kesselUeberlastet, ladungKg, truppVon } from '../sim/abfragen.js';
+import { fundstelleMitId } from '../sim/welt/fundstellen.js';
+import { WAREN, FUNDARTEN, LADERAUM_KG } from '../data/fundstellen.js';
+import { tonnen } from '../render/fundstellen.js';
 import { untergrundAn } from '../sim/welt/untergrund.js';
 import { UNTERGRUND } from '../data/untergrund.js';
 import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF } from '../data/koloss.js';
@@ -49,10 +52,16 @@ export function anzeigeAufbauen(hud, aktionen) {
         <button id="a-licht" class="lampe" tabindex="-1" title="Scheinwerfer an/aus (L)"><canvas id="a-lampe"></canvas></button></div>
       <div class="zeile"><span class="beschr">Wind</span><span id="a-windpfeil" class="windpfeil">➜</span><span id="a-wind"></span></div>
       <div class="zeile"><span class="beschr">Boden</span><span id="a-boden"></span></div>
+      <div class="zeile" title="Laderaum: Linksklick auf eine Fundstelle in Reichweite schickt den Trupp (nur im Stand). Ladung macht den Koloss träger."><span class="beschr">Ladung</span>
+        <span class="ladebalken"><span id="a-ladefuell"></span></span><span id="a-ladung"></span></div>
+      <div class="waren">${WAREN.map((w) => `<span class="ware"><i style="background:${w.farbe}"></i>${w.name} <b id="a-ware-${w.ware}"></b></span>`).join('')}</div>
+      <div class="zeile"><span class="beschr">Trupp</span><span id="a-trupp"></span></div>
     </div>
     <div class="tafel rechts-unten"><div id="a-mass" class="mass"></div><div id="a-masstext"></div></div>
     <div id="a-status" class="status"></div>`;
-  for (const id of ['a-tempo', 'a-druck', 'a-befehl', 'a-licht', 'a-windpfeil', 'a-wind', 'a-boden', 'a-mass', 'a-masstext', 'a-status']) {
+  const ids = ['a-tempo', 'a-druck', 'a-befehl', 'a-licht', 'a-windpfeil', 'a-wind', 'a-boden', 'a-mass', 'a-masstext', 'a-status',
+    'a-ladefuell', 'a-ladung', 'a-trupp', ...WAREN.map((w) => 'a-ware-' + w.ware)];
+  for (const id of ids) {
     el[id] = /** @type {HTMLElement} */ (hud.querySelector('#' + id));
   }
   maschine = /** @type {HTMLCanvasElement} */ (hud.querySelector('#a-maschine'));
@@ -94,11 +103,35 @@ export function anzeigeAktualisieren(spiel, dtMs) {
       ueberlast: kesselUeberlastet(s.seed, k),
       weg: wegVon(k.id), dtMs: v.pausiert() ? 0 : dtMs,
     });
+    laderaum(s, k);
   }
   massstab();
   const status = v.pausiert() ? 'PAUSE' : v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '';
   el['a-status'].textContent = status;
   el['a-status'].hidden = status === '';
+}
+
+/**
+ * Laderaum und Trupp (M3). Texte nur setzen, wenn sie sich ändern.
+ * @param {import('../sim/types.js').Zustand} s
+ * @param {import('../sim/types.js').Koloss} k
+ */
+function laderaum(s, k) {
+  const kg = ladungKg(k);
+  setzen('a-ladung', `${tonnen(kg)} / ${LADERAUM_KG / 1000} t`);
+  el['a-ladefuell'].style.width = `${(100 * kg) / LADERAUM_KG}%`;
+  for (const w of WAREN) {
+    setzen('a-ware-' + w.ware, tonnen(k.ladung[w.ware]).replace(' t', ''));
+    el['a-ware-' + w.ware].parentElement?.classList.toggle('leer', k.ladung[w.ware] === 0);
+  }
+  const t = truppVon(s, k);
+  const f = t.fund >= 0 ? fundstelleMitId(s.seed, t.fund) : null;
+  setzen('a-trupp', f ? `birgt ${FUNDARTEN[f.art].name} · ${t.leute} Mann` : `an Bord · ${t.leute} Mann`);
+}
+
+/** @param {string} id @param {string} text */
+function setzen(id, text) {
+  if (el[id].textContent !== text) el[id].textContent = text;
 }
 
 /** Maßstabsbalken: runde Länge (1-2-5-Reihe), die 60–150 Bildpunkte breit ist. */

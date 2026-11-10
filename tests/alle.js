@@ -12,6 +12,7 @@ import './fahren.test.js';
 import './wetter.test.js';
 import './welt.test.js';
 import './kollision.test.js';
+import './bergen.test.js';
 import './determinismus.test.js';
 import './regeln.test.js';
 

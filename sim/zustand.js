@@ -31,5 +31,7 @@ export function neuerZustand(seed) {
     wetter,
     spieler: [],
     kolosse: [],
+    trupps: [],
+    geborgen: [],
   };
 }

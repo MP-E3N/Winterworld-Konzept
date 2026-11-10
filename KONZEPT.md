@@ -80,7 +80,7 @@ Der Spielstand läuft dauerhaft — im Multiplayer später auf einem Server.
 - **Liegengeblieben** (kein Brennstoff, Rumpf zerstört, Crew erfroren): *Vorschlag* — der
   Koloss bleibt als **Wrack in der Welt** (mit Ladung, als Fundstelle für andere), man
   beginnt in der zuletzt besuchten Siedlung mit einem einfachen Koloss neu. Hart, aber
-  kein Verlust der ganzen Welt. *(Noch zu bestätigen.)*
+  kein Verlust der ganzen Welt. *(Bestätigt nach M3, F6.)*
 
 ---
 
@@ -326,10 +326,10 @@ Wenn nicht, hilft kein Ressourcensystem.
 | F2 | Multiplayer-Art | **Koop + Konkurrenz**, kein PvP-Kampf (§8) |
 | F3 | Pause | **Pause + Tempo im Einzelspiel**, im Multiplayer läuft die Zeit (§7) |
 | F4 | Bergen | **Erst Ladebalken (M3), später sichtbare Leute** (§7) |
+| F6 | Liegengeblieben | **Wrack bleibt mit Ladung in der Welt, Neustart in der letzten Siedlung** (§2, bestätigt nach M3) |
 
 **Noch offen:**
 - **F5 Name:** „Eiskoloss“ ist nur Arbeitstitel.
-- **F6 Liegengeblieben:** Vorschlag in §2 (Wrack bleibt in der Welt, Neustart in Siedlung) bestätigen?
 - **F7 Konkurrenz-Regeln:** Vorschläge in §8 bestätigen (spätestens vor M6).
 
 **Folgen für den Bauplan:** M2 erzeugt Chunks unbegrenzt bei Bedarf (nicht nur 16 × 16 km)

@@ -85,6 +85,16 @@ in dichten Rußfeldern) werden Flecken und Radabdrücke beim Ablegen einmal in W
 verblassen gemeinsam (alle 20 s ein Stück) statt jeder Fleck einzeln — Preis: Aus großer Nähe sind
 die Flecken leicht weicher (8 px/m). Rauch wird in halber Auflösung gemalt.
 
+## E-014 Fundstellen aus dem Seed, geborgen als Änderungsliste, Trupp je Koloss (2026-11-10, M3)
+Fundstellen werden wie das Gelände aus dem Seed berechnet (eine je 200-m-Fundzelle, ID = gepackte
+Zellnummer) und stehen nie im Zustand. Im Zustand steht nur, was angebrochen ist:
+`state.geborgen[] = {fund, rest}` (KONZEPT §8 R7). Jeder Koloss bekommt beim Beitritt genau einen
+Trupp (`state.trupps[]`, Index = ID, `fund = -1` = an Bord) — so bleibt die Liste ohne Löcher und
+der Trupp kann in M7 eine Position bekommen. **Nutzerentscheidungen:** vier Arten (Kohle, Holz, Öl,
+Vorräte), Bergen nur im Stand (Telegraf Stopp, fast 0 km/h — auf Eis klingt Rutschen in Ganzzahlen
+nie ganz auf 0 ab), Nebel später. **Gewicht** senkt den Schub linear bis −25 % bei vollem Laderaum
+(60 t); leer ist alles exakt wie vorher. Zustand v6, Replay neu aufgenommen (Testfahrt birgt zuerst Kohle).
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige

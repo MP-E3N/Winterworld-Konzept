@@ -10,6 +10,8 @@
  *             ek.neu(seed)      neue Welt (0 = Testgelände)
  *             ek.kacheln()      Gelände-Kacheln der Darstellung
  *             ek.nacht(x)       Dunkelheit 0 … 1 zum Testen der Scheinwerfer (ek.nacht(0) = Tag)
+ *             ek.funde(m)       Fundstellen im Umkreis m (Standard 600 m) mit Abstand und Rest
+ *             ek.ladung()       Laderaum des eigenen Kolosses (t)
  *             ek.replay()       Protokoll dieser Fahrt als JSON (für Fehlerberichte)
  *             ek.kamera, ek.spiel, ek.verbindung, ek.optik()
  * LIEST:    das Spiel
@@ -18,7 +20,10 @@
 
 import { einTick } from '../game/spiel.js';
 import { zustandsHash } from '../sim/lib/hash.js';
-import { kolossVon } from '../sim/abfragen.js';
+import { kolossVon, rumpfMitte, fundRest } from '../sim/abfragen.js';
+import { fundstellenImBereich } from '../sim/welt/fundstellen.js';
+import { FUNDARTEN } from '../data/fundstellen.js';
+import { UM_PRO_METER } from '../data/koloss.js';
 import { untergrundAn } from '../sim/welt/untergrund.js';
 import { UNTERGRUND } from '../data/untergrund.js';
 import { kamera } from '../render/kamera.js';
@@ -52,6 +57,23 @@ export function konsoleEinrichten(spielHolen, neueWelt) {
       const v = spielHolen().verbindung;
       const s = v.zustand();
       return JSON.stringify({ seed: s.seed, ticks: s.tick, hash: zustandsHash(s), protokoll: v.protokoll() });
+    },
+    /** @param {number} [umkreis=600]  Meter */
+    funde(umkreis = 600) {
+      const v = spielHolen().verbindung;
+      const s = v.zustand();
+      const k = kolossVon(s, v.spieler);
+      if (!k) return [];
+      const m = rumpfMitte(k), r = umkreis * UM_PRO_METER;
+      return fundstellenImBereich(s.seed, m.x - r, m.y - r, m.x + r, m.y + r)
+        .map((f) => ({ id: f.id, art: FUNDARTEN[f.art].name, abstandM: Math.round(Math.hypot(f.x - m.x, f.y - m.y) / UM_PRO_METER), restT: fundRest(s, f) / 1000, mengeT: f.menge / 1000 }))
+        .filter((f) => f.abstandM <= umkreis)
+        .sort((a, b) => a.abstandM - b.abstandM);
+    },
+    ladung() {
+      const v = spielHolen().verbindung;
+      const k = kolossVon(v.zustand(), v.spieler);
+      return k ? Object.fromEntries(Object.entries(k.ladung).map(([w, kg]) => [w, kg / 1000])) : null;
     },
     optik: optikZahlen,
     kacheln: kachelZahlen,

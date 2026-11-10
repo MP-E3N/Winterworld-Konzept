@@ -8,10 +8,11 @@
  * SCHREIBT: —
  */
 
-import { UM_PRO_METER, SCHUB, SCHUB_RUECKWAERTS, TELEGRAF, TEMPO_EIN_KMH } from '../data/koloss.js';
+import { UM_PRO_METER, SCHUB, SCHUB_RUECKWAERTS, TELEGRAF, TEMPO_EIN_KMH, TELEGRAF_STOPP, RUMPF_VOR_DREHPUNKT_M } from '../data/koloss.js';
+import { WAREN, LADERAUM_KG, GEWICHT_BREMST_PROMILLE, STAND_TEMPO, BERGEN_REICHWEITE_M } from '../data/fundstellen.js';
 import { UNTERGRUND } from '../data/untergrund.js';
 import { untergrundAn } from './welt/untergrund.js';
-import { cosW, sinW, teile } from './lib/winkel.js';
+import { cosW, sinW, teile, TRIG_EINS } from './lib/winkel.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 /** @typedef {import('./types.js').Koloss} Koloss */
@@ -74,7 +75,7 @@ export function alsMeter(um) {
  */
 export function hoechstTempo(seed, k, rueckwaerts = false) {
   const u = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
-  const schub = rueckwaerts ? (k.druck > 0 ? SCHUB_RUECKWAERTS : 0) : SCHUB[k.druck];
+  const schub = schubMitLadung(k, rueckwaerts ? (k.druck > 0 ? SCHUB_RUECKWAERTS : 0) : SCHUB[k.druck]);
   return teile(schub * u.zug * 4096, u.widerstand * 100);
 }
 
@@ -97,4 +98,96 @@ export function kesselUeberlastet(seed, k) {
   const ziel = telegrafZiel(k);
   if (k.gas !== 0 || ziel === 0) return false;
   return Math.abs(ziel) > hoechstTempo(seed, k, ziel < 0);
+}
+
+// ── Bergen und Laderaum (M3) ──────────────────────────────
+
+/**
+ * Rumpfmitte (µm). Die Position im Zustand ist der Drehpunkt; der Rumpf liegt
+ * RUMPF_VOR_DREHPUNKT_M davor (E-011). Reichweite des Trupps zählt ab hier.
+ * @param {Koloss} k
+ * @returns {{x: number, y: number}}
+ */
+export function rumpfMitte(k) {
+  const vor = RUMPF_VOR_DREHPUNKT_M * UM_PRO_METER;
+  return { x: k.x + teile(vor * cosW(k.h), TRIG_EINS), y: k.y + teile(vor * sinW(k.h), TRIG_EINS) };
+}
+
+/**
+ * Steht der Koloss so, dass ein Trupp aussteigen kann? Telegraf auf „Stopp“, kein Handgas und
+ * (fast) kein Tempo (Nutzerentscheidung M3: Bergen nur im Stand).
+ * @param {Koloss} k
+ * @returns {boolean}
+ */
+export function kolossSteht(k) {
+  return k.telegraf === TELEGRAF_STOPP && k.gas === 0 && Math.abs(k.vx) <= STAND_TEMPO && Math.abs(k.vy) <= STAND_TEMPO;
+}
+
+/**
+ * Liegt ein Punkt in Reichweite des Trupps (ab Rumpfmitte)?
+ * WARUM erst die Kästchen-Probe: Quadrate weit entfernter Punkte in µm wären keine sicheren
+ * Ganzzahlen mehr. Gerechnet wird in mm.
+ * @param {Koloss} k
+ * @param {number} x @param {number} y  µm
+ * @returns {boolean}
+ */
+export function inReichweite(k, x, y) {
+  const m = rumpfMitte(k);
+  const r = BERGEN_REICHWEITE_M * 1000; // mm
+  const dx = teile(x - m.x, 1000), dy = teile(y - m.y, 1000);
+  if (Math.abs(dx) > r || Math.abs(dy) > r) return false;
+  return dx * dx + dy * dy <= r * r;
+}
+
+/**
+ * Was in einer Fundstelle noch liegt (kg): Eintrag in der Änderungsliste, sonst die Anfangsmenge.
+ * @param {Zustand} state
+ * @param {{id: number, menge: number}} f  Fundstelle (sim/welt/fundstellen.js)
+ * @returns {number}
+ */
+export function fundRest(state, f) {
+  for (const g of state.geborgen) if (g.fund === f.id) return g.rest;
+  return f.menge;
+}
+
+/**
+ * Gesamtgewicht im Laderaum (kg).
+ * @param {Koloss} k
+ * @returns {number}
+ */
+export function ladungKg(k) {
+  let summe = 0;
+  for (const w of WAREN) summe += k.ladung[w.ware];
+  return summe;
+}
+
+/**
+ * Freier Platz im Laderaum (kg).
+ * @param {Koloss} k
+ * @returns {number}
+ */
+export function ladungFrei(k) {
+  return LADERAUM_KG - ladungKg(k);
+}
+
+/**
+ * Schub nach Abzug für das Gewicht der Ladung: linear bis GEWICHT_BREMST_PROMILLE bei vollem
+ * Laderaum. Leer = genau der volle Schub (Fahrwerte und Replays aus M1/M2 bleiben gleich).
+ * @param {Koloss} k
+ * @param {number} schub  µm/Tick²
+ * @returns {number}
+ */
+export function schubMitLadung(k, schub) {
+  const abzug = teile(ladungKg(k) * GEWICHT_BREMST_PROMILLE, LADERAUM_KG);
+  return teile(schub * (1000 - abzug), 1000);
+}
+
+/**
+ * Der Bergungstrupp eines Kolosses.
+ * @param {Zustand} state
+ * @param {Koloss} k
+ * @returns {import('./types.js').Trupp}
+ */
+export function truppVon(state, k) {
+  return state.trupps[k.trupp];
 }
