@@ -1,6 +1,7 @@
 // @ts-check
 /**
- * anzeige.js — Anzeigen am Bildrand: Tempo, Dampfmaschine, Kesseldruck, Wind, Boden, Maßstab.
+ * anzeige.js — Anzeigen am Bildrand: Tempo, Dampfmaschine, Kesseldruck, Maschinentelegraf, Wind,
+ *              Boden, Maßstab.
  *
  * ZWECK:    Das Nötigste zum Fahren, schlicht (Nutzerwunsch aus Kronwege: keine Extra-Fenster,
  *           Bedienhinweise nur hinter „?“).
@@ -9,15 +10,16 @@
  * REGEL:    „Aufbauen + Aktualisieren“: Elemente einmal bauen, danach nur Texte setzen.
  */
 
-import { kolossVon, laengsTempo, alsKmh, hoechstTempo } from '../sim/abfragen.js';
-import { befehlPruefen } from '../sim/befehle.js';
+import { kolossVon, laengsTempo, alsKmh, kesselUeberlastet } from '../sim/abfragen.js';
 import { untergrundAn } from '../sim/welt/untergrund.js';
 import { UNTERGRUND } from '../data/untergrund.js';
-import { DRUCKSTUFEN, EINGABE_MAX, TEMPOMAT_MIN_KMH, TEMPOMAT_MAX_KMH } from '../data/koloss.js';
+import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF } from '../data/koloss.js';
 import { kamera } from '../render/kamera.js';
 import { wegVon } from '../render/spuren.js';
 import { windVektor, windRelativ } from '../render/wind.js';
 import { dampfmaschineEinrichten, dampfmaschineZeichnen } from './dampfmaschine.js';
+import { telegrafEinrichten, telegrafZeichnen } from './telegraf.js';
+import { lampeEinrichten, lampeZeichnen } from './lampe.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -25,11 +27,15 @@ import { dampfmaschineEinrichten, dampfmaschineZeichnen } from './dampfmaschine.
 const el = {};
 /** @type {HTMLCanvasElement} */
 let maschine;
+/** @type {HTMLCanvasElement} */
+let telegraf;
+/** @type {HTMLCanvasElement} */
+let lampe;
 
 /**
  * Baut die Anzeige einmal auf.
  * @param {HTMLElement} hud
- * @param {{tempoHalten: () => void, zieltempo: (kmh: number) => void}} aktionen  aus eingabe/tastatur.js
+ * @param {{telegraf: (stufe: number) => void, licht: () => void}} aktionen  aus eingabe/tastatur.js
  */
 export function anzeigeAufbauen(hud, aktionen) {
   hud.innerHTML = `
@@ -37,24 +43,26 @@ export function anzeigeAufbauen(hud, aktionen) {
       <div class="tempo"><span id="a-tempo">0</span><small> km/h</small></div>
       <canvas id="a-maschine" title="Kessel: Glut und Manometer zeigen den Druck, Kolben und Schwungrad laufen mit den Rädern"></canvas>
       <div class="zeile"><span class="beschr">Kessel</span><span id="a-druck"></span></div>
-      <button id="a-tempomat" class="knopf" tabindex="-1" title="Hält das aktuelle Tempo ohne W. S schaltet aus, W + Loslassen setzt ein neues Tempo.">Tempo halten (R)</button>
-      <div id="a-regler" class="zeile regler" title="Zieltempo für „Tempo halten“">
-        <input id="a-zieltempo" type="range" min="2" max="34" step="1" tabindex="-1">
-        <span id="a-zielwert"></span>
-      </div>
+      <canvas id="a-telegraf" title="Maschinentelegraf: W/S oder Klick stellen den Hebel, die Maschine hält das Tempo. Der kleine Kupferzeiger zeigt das echte Tempo."></canvas>
+      <div id="a-befehl" class="schild"></div>
+      <div class="zeile"><span class="beschr">Licht</span>
+        <button id="a-licht" class="lampe" tabindex="-1" title="Scheinwerfer an/aus (L)"><canvas id="a-lampe"></canvas></button></div>
       <div class="zeile"><span class="beschr">Wind</span><span id="a-windpfeil" class="windpfeil">➜</span><span id="a-wind"></span></div>
       <div class="zeile"><span class="beschr">Boden</span><span id="a-boden"></span></div>
     </div>
     <div class="tafel rechts-unten"><div id="a-mass" class="mass"></div><div id="a-masstext"></div></div>
     <div id="a-status" class="status"></div>`;
-  for (const id of ['a-tempo', 'a-druck', 'a-tempomat', 'a-regler', 'a-zieltempo', 'a-zielwert', 'a-windpfeil', 'a-wind', 'a-boden', 'a-mass', 'a-masstext', 'a-status']) {
+  for (const id of ['a-tempo', 'a-druck', 'a-befehl', 'a-licht', 'a-windpfeil', 'a-wind', 'a-boden', 'a-mass', 'a-masstext', 'a-status']) {
     el[id] = /** @type {HTMLElement} */ (hud.querySelector('#' + id));
   }
   maschine = /** @type {HTMLCanvasElement} */ (hud.querySelector('#a-maschine'));
-  // blur(): sonst behält der Knopf den Fokus, und die Leertaste würde ihn erneut auslösen.
-  el['a-tempomat'].addEventListener('click', () => { aktionen.tempoHalten(); el['a-tempomat'].blur(); });
-  reglerEinrichten(aktionen.zieltempo);
+  telegraf = /** @type {HTMLCanvasElement} */ (hud.querySelector('#a-telegraf'));
   dampfmaschineEinrichten(maschine);
+  telegrafEinrichten(telegraf, aktionen.telegraf);
+  lampe = /** @type {HTMLCanvasElement} */ (hud.querySelector('#a-lampe'));
+  lampeEinrichten(lampe);
+  // blur(): sonst behält der Schalter den Fokus, und die Leertaste würde ihn erneut auslösen.
+  el['a-licht'].addEventListener('click', () => { aktionen.licht(); el['a-licht'].blur(); });
 }
 
 /**
@@ -69,7 +77,12 @@ export function anzeigeAktualisieren(spiel, dtMs) {
   if (k) {
     el['a-tempo'].textContent = Math.abs(alsKmh(laengsTempo(k))).toFixed(0);
     el['a-druck'].textContent = DRUCKSTUFEN[k.druck].name;
-    tempoHaltenAnzeigen(s, v.spieler, k);
+    const kmh = alsKmh(laengsTempo(k));
+    telegrafZeichnen(telegraf, { stufe: k.telegraf, kmh, dtMs });
+    const t = TELEGRAF[k.telegraf];
+    const befehl = t.kmh === 0 ? t.name.toUpperCase() : `${t.name.toUpperCase()} · ${Math.abs(t.kmh)} km/h`;
+    if (el['a-befehl'].textContent !== befehl) el['a-befehl'].textContent = befehl;
+    lampeZeichnen(lampe, k.licht === 1, v.pausiert() ? 0 : dtMs);
     el['a-boden'].textContent = UNTERGRUND[untergrundAn(s.seed, k.x, k.y)].name;
     const wind = windVektor(s.wetter);
     // Pfeil zeigt, wohin der Wind weht (Norden = oben, wie auf der Karte).
@@ -77,8 +90,8 @@ export function anzeigeAktualisieren(spiel, dtMs) {
     el['a-wind'].textContent = `${wind.ms.toFixed(0)} m/s · ${windRelativ(s.wetter, (k.h / 65536) * 2 * Math.PI)}`;
     dampfmaschineZeichnen(maschine, {
       druck: k.druck, druckMax: DRUCKSTUFEN.length - 1, gas: k.antrieb / EINGABE_MAX,
-      // Überlast: „Tempo halten“ will schneller, als der Kessel auf diesem Boden schafft.
-      ueberlast: k.tempomat > 0 && k.gas === 0 && k.tempomat > hoechstTempo(s.seed, k),
+      // Überlast: Der Telegraf will schneller, als der Kessel auf diesem Boden schafft.
+      ueberlast: kesselUeberlastet(s.seed, k),
       weg: wegVon(k.id), dtMs: v.pausiert() ? 0 : dtMs,
     });
   }
@@ -86,47 +99,6 @@ export function anzeigeAktualisieren(spiel, dtMs) {
   const status = v.pausiert() ? 'PAUSE' : v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '';
   el['a-status'].textContent = status;
   el['a-status'].hidden = status === '';
-}
-
-/**
- * Knopf „Tempo halten“: leuchtet, wenn an, und zeigt das gehaltene Tempo; gesperrt, wenn zu langsam.
- * @param {import('../sim/types.js').Zustand} s @param {number} spieler
- * @param {import('../sim/types.js').Koloss} k
- */
-function tempoHaltenAnzeigen(s, spieler, k) {
-  const knopf = /** @type {HTMLButtonElement} */ (el['a-tempomat']);
-  const an = k.tempomat > 0;
-  knopf.classList.toggle('an', an);
-  const text = an ? `Tempo halten: ${alsKmh(k.tempomat).toFixed(0)} km/h (R)` : 'Tempo halten (R)';
-  if (knopf.textContent !== text) knopf.textContent = text; // nur bei Änderung: sonst gehen Klicks verloren
-  knopf.disabled = !an && befehlPruefen(s, { art: 'TEMPOMAT', spieler, an: true }) !== null;
-  // Regler nur, solange Tempo halten an ist (Nutzerwunsch).
-  el['a-regler'].hidden = !an;
-  if (!an) return;
-  const regler = /** @type {HTMLInputElement} */ (el['a-zieltempo']);
-  const ziel = Math.round(alsKmh(k.tempomat));
-  if (!reglerZiehen && regler.value !== String(ziel)) regler.value = String(ziel);
-  // Spieltest 4: kein Warntext — Überlast zeigt die zitternde Manometer-Nadel.
-  const zielText = `${ziel} km/h`;
-  if (el['a-zielwert'].textContent !== zielText) el['a-zielwert'].textContent = zielText;
-}
-
-/** true, solange der Spieler den Regler zieht — dann nicht aus dem Zustand überschreiben. */
-let reglerZiehen = false;
-
-/**
- * Schieberegler fürs Zieltempo. Sendet bei jeder ganzen km/h einen TEMPOMAT-Befehl.
- * WARUM blur(): Behält der Regler den Fokus, verstellen ihn die Pfeiltasten statt zu lenken.
- * @param {(kmh: number) => void} zieltempo
- */
-function reglerEinrichten(zieltempo) {
-  const regler = /** @type {HTMLInputElement} */ (el['a-zieltempo']);
-  regler.min = String(TEMPOMAT_MIN_KMH);
-  regler.max = String(TEMPOMAT_MAX_KMH);
-  regler.addEventListener('pointerdown', () => { reglerZiehen = true; });
-  regler.addEventListener('input', () => zieltempo(Number(regler.value)));
-  regler.addEventListener('change', () => { reglerZiehen = false; regler.blur(); });
-  window.addEventListener('pointerup', () => { reglerZiehen = false; regler.blur(); });
 }
 
 /** Maßstabsbalken: runde Länge (1-2-5-Reihe), die 60–150 Bildpunkte breit ist. */

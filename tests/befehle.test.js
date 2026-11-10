@@ -49,3 +49,11 @@ test('Befehle: abgelehnter Befehl ändert nichts', () => {
   pruefe(!erg.ok, 'hätte abgelehnt werden müssen');
   gleich(JSON.stringify(state), vorher, 'Zustand verändert');
 });
+
+test('Befehle: LICHT schaltet die Scheinwerfer (0/1 im Zustand), Unsinn wird abgelehnt', () => {
+  const { state, k } = testwelt();
+  pruefe(k.licht === 0, 'Licht ist beim Start an');
+  pruefe(befehlAnwenden(state, { art: 'LICHT', spieler: 0, an: true }).ok && k.licht === 1, 'einschalten');
+  pruefe(befehlAnwenden(state, { art: 'LICHT', spieler: 0, an: false }).ok && k.licht === 0, 'ausschalten');
+  pruefe(befehlPruefen(state, /** @type {any} */ ({ art: 'LICHT', spieler: 0, an: 1 })) !== null, 'an = 1 erlaubt');
+});

@@ -12,8 +12,8 @@ import { test, pruefe } from './harness.js';
 import { testwelt, fahre, setzeAn } from './helfer.js';
 import { tickAusfuehren } from '../sim/tick.js';
 import { befehlAnwenden } from '../sim/befehle.js';
-import { laengsTempo, querTempo, alsKmh, hoechstTempo } from '../sim/abfragen.js';
-import { DRUCKSTUFEN, RUECKWAERTS_KMH } from '../data/koloss.js';
+import { laengsTempo, querTempo, alsKmh, hoechstTempo, kesselUeberlastet } from '../sim/abfragen.js';
+import { DRUCKSTUFEN, RUECKWAERTS_KMH, TELEGRAF, TELEGRAF_STOPP, WENDE_RADIUS } from '../data/koloss.js';
 import { TICKS_PRO_SEKUNDE } from '../data/takt.js';
 
 const SEK = TICKS_PRO_SEKUNDE;
@@ -138,39 +138,49 @@ test('Fahren: nach dem Loslassen der Lenkung hört die Drehung ganz auf (auch im
   }
 });
 
-test('Tempo halten: hält das Tempo ohne Gastaste, S schaltet aus, W + loslassen setzt neues Ziel', () => {
-  const { state, k } = testwelt();
-  setzeAn(k, 0, 2000, OSTEN);
-  pruefe(befehlAnwenden(state, { art: 'TEMPOMAT', spieler: 0, an: true }).ok === false, 'im Stand einschaltbar');
-  fahre(state, { gas: 100, druck: 4 }, 4 * SEK);
-  const ziel = alsKmh(laengsTempo(k));
-  pruefe(befehlAnwenden(state, { art: 'TEMPOMAT', spieler: 0, an: true }).ok, 'einschalten');
-  fahre(state, { gas: 0 }, 40 * SEK);
-  const gehalten = alsKmh(laengsTempo(k));
-  pruefe(Math.abs(gehalten - ziel) < 0.7, `Ziel ${ziel.toFixed(2)}, nach 40 s ${gehalten.toFixed(2)} km/h`);
-  // W drücken → schneller; loslassen → neues, höheres Ziel wird gehalten.
-  fahre(state, { gas: 100 }, 5 * SEK);
-  fahre(state, { gas: 0 }, 30 * SEK);
-  const neu = alsKmh(laengsTempo(k));
-  pruefe(neu > gehalten + 3 && k.tempomat > 0, `nach W+loslassen ${neu.toFixed(2)} km/h, Tempo halten ${k.tempomat}`);
-  // S schaltet aus.
-  fahre(state, { gas: -100 }, 1);
-  pruefe(k.tempomat === 0, 'S hat Tempo halten nicht ausgeschaltet');
+test('Telegraf: jede Stellung voraus wird gehalten, auch aus dem Stand', () => {
+  for (const stufe of [4, 5, 6, 7]) {
+    const { state, k } = testwelt();
+    setzeAn(k, 0, 2000, OSTEN);
+    fahre(state, { druck: 4, telegraf: stufe }, 60 * SEK);
+    const kmh = alsKmh(laengsTempo(k)), ziel = TELEGRAF[stufe].kmh;
+    pruefe(Math.abs(kmh - ziel) < 0.7, `${TELEGRAF[stufe].name}: ${kmh.toFixed(2)} statt ${ziel} km/h`);
+  }
 });
 
-test('Tempo halten: Schieberegler setzt ein festes Zieltempo, auch aus dem Stand', () => {
+test('Telegraf: Herunterschalten bremst sanft, Stopp hält an, zurück fährt rückwärts', () => {
   const { state, k } = testwelt();
   setzeAn(k, 0, 2000, OSTEN);
-  fahre(state, { druck: 3 }, 1);
-  pruefe(befehlAnwenden(state, { art: 'TEMPOMAT', spieler: 0, an: true, kmh: 12 }).ok, 'aus dem Stand mit 12 km/h');
-  fahre(state, { gas: 0 }, 40 * SEK);
-  const kmh = alsKmh(laengsTempo(k));
-  pruefe(Math.abs(kmh - 12) < 0.7, `hält ${kmh.toFixed(2)} statt 12 km/h`);
-  befehlAnwenden(state, { art: 'TEMPOMAT', spieler: 0, an: true, kmh: 20 });
-  fahre(state, { gas: 0 }, 40 * SEK);
-  pruefe(Math.abs(alsKmh(laengsTempo(k)) - 20) < 0.7, `hält ${alsKmh(laengsTempo(k)).toFixed(2)} statt 20 km/h`);
-  pruefe(!befehlAnwenden(state, { art: 'TEMPOMAT', spieler: 0, an: true, kmh: 99 }).ok, '99 km/h erlaubt');
-  pruefe(!befehlAnwenden(state, { art: 'TEMPOMAT', spieler: 0, an: true, kmh: 7.5 }).ok, 'Kommazahl erlaubt');
+  fahre(state, { druck: 3, telegraf: 7 }, 60 * SEK); // Voll voraus, 26 km/h
+  fahre(state, { telegraf: 5 }, 3 * SEK);             // Langsam voraus
+  const nach3s = alsKmh(laengsTempo(k));
+  pruefe(nach3s > 12 && nach3s < 20, `nach 3 s ${nach3s.toFixed(2)} km/h — bremst zu hart oder gar nicht`);
+  fahre(state, { telegraf: 5 }, 30 * SEK);
+  pruefe(Math.abs(alsKmh(laengsTempo(k)) - 10) < 0.7, `Langsam: ${alsKmh(laengsTempo(k)).toFixed(2)} km/h`);
+  fahre(state, { telegraf: TELEGRAF_STOPP }, 30 * SEK);
+  pruefe(laengsTempo(k) === 0, `Stopp: steht nicht, ${alsKmh(laengsTempo(k)).toFixed(3)} km/h`);
+  fahre(state, { telegraf: 1 }, 40 * SEK);            // Halb zurück
+  pruefe(Math.abs(alsKmh(laengsTempo(k)) + 4) < 0.5, `Halb zurück: ${alsKmh(laengsTempo(k)).toFixed(2)} km/h`);
+});
+
+test('Telegraf: Handgas geht vor, ungültige Stellungen werden abgelehnt', () => {
+  const { state, k } = testwelt();
+  setzeAn(k, 0, 2000, OSTEN);
+  pruefe(k.telegraf === TELEGRAF_STOPP, 'Start nicht auf Stopp');
+  fahre(state, { druck: 2, telegraf: 8, gas: -100 }, 10 * SEK);
+  pruefe(laengsTempo(k) < 0, 'Handgas rückwärts hat den Telegrafen nicht übersteuert');
+  for (const stufe of [-1, TELEGRAF.length, 1.5]) {
+    pruefe(!befehlAnwenden(state, { art: 'TELEGRAF', spieler: 0, stufe }).ok, `Stellung ${stufe} erlaubt`);
+  }
+});
+
+test('Telegraf: Kessel überlastet, wenn die Stellung mehr verlangt als der Kessel schafft', () => {
+  const { state, k } = testwelt();
+  setzeAn(k, 0, 2000, OSTEN);
+  fahre(state, { druck: 2, telegraf: 6 }, 1); // Mittel schafft 18 = Halb voraus
+  pruefe(!kesselUeberlastet(state.seed, k), 'Halb voraus mit Mittel gilt als Überlast');
+  fahre(state, { telegraf: 7 }, 1);
+  pruefe(kesselUeberlastet(state.seed, k), 'Voll voraus mit Mittel gilt nicht als Überlast');
 });
 
 test('Abfrage hoechstTempo stimmt mit dem gemessenen Höchsttempo überein (Überlast-Anzeige)', () => {
@@ -195,6 +205,24 @@ test('Fahren: D lenkt nach rechts (im Uhrzeigersinn), Kurvenradius 15–80 m', (
   const bogen = (k.dreh / 65536) * 2 * Math.PI;
   const radius = laengsTempo(k) / 1000000 / bogen;
   pruefe(radius > 15 && radius < 80, `Radius ${radius.toFixed(1)} m`);
+});
+
+test('Fahren: langsam fahren = langsam drehen; der Kurvenradius bleibt bei kleinem Tempo gleich', () => {
+  /** @param {number} stufe Telegraf @returns {{dreh: number, radius: number}} */
+  function kurve(stufe) {
+    const { state, k } = testwelt();
+    setzeAn(k, 0, 2000, OSTEN);
+    fahre(state, { druck: 4, telegraf: stufe }, 40 * SEK);
+    fahre(state, { telegraf: stufe, lenkung: 100 }, 2 * SEK);
+    const bogen = (k.dreh / 65536) * 2 * Math.PI;
+    return { dreh: k.dreh, radius: laengsTempo(k) / 1000000 / bogen };
+  }
+  const ganzLangsam = kurve(4), langsam = kurve(5), voll = kurve(7);
+  pruefe(ganzLangsam.dreh * 2 < langsam.dreh, `4 km/h dreht ${ganzLangsam.dreh}, 10 km/h ${langsam.dreh} — nicht langsamer`);
+  const soll = WENDE_RADIUS / 1e6;
+  pruefe(Math.abs(ganzLangsam.radius - soll) < 2 && Math.abs(langsam.radius - soll) < 2,
+    `Radius bei 4 km/h ${ganzLangsam.radius.toFixed(1)} m, bei 10 km/h ${langsam.radius.toFixed(1)} m (soll ≈ ${soll})`);
+  pruefe(voll.radius > soll * 1.3, `bei 26 km/h zu enger Bogen: ${voll.radius.toFixed(1)} m`);
 });
 
 test('Fahren: auf Eis folgt die Bewegung der Lenkung kaum, auf Schnee fast ganz', () => {

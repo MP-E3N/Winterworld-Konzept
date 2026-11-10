@@ -11,7 +11,7 @@
  * DEBUG:    Steht das Schwungrad, obwohl der Koloss fährt? wegVon() prüfen.
  */
 
-import { RAD_DURCHMESSER_M } from '../data/ansicht.js';
+import { TRAKTION_DURCHMESSER_M } from '../data/ansicht.js';
 import { FARBEN_KOLOSS as F } from '../data/ansicht.js';
 
 /** Zeichenfläche in Grund-Einheiten … */
@@ -46,7 +46,7 @@ export function dampfmaschineZeichnen(c, w) {
   const anteil = w.druck / w.druckMax;
   const last = anteil * (0.3 + 0.7 * Math.max(0, w.gas));
   // Kurbelwinkel = Radwinkel: Kolben und Räder sind gekoppelt.
-  const winkel = (w.weg / (Math.PI * RAD_DURCHMESSER_M)) * Math.PI * 2;
+  const winkel = (w.weg / (Math.PI * TRAKTION_DURCHMESSER_M)) * Math.PI * 2;
   const k = 1 - Math.exp(-w.dtMs / 250);
   optik.nadel += (anteil + (w.gas > 0 ? Math.sin(performance.now() / 90) * 0.015 * anteil : 0) - optik.nadel) * k;
   // Überlast: Die Nadel zittert heftig um ihren Platz (Spieltest 4 — statt Warntext).

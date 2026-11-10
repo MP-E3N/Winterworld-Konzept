@@ -56,3 +56,11 @@ test('Kollision: Lenken in die Wand hinein dreht ihn nicht hinein', () => {
   }
   pruefe(NORDEN !== k.h, 'Selbsttest');
 });
+
+test('Kollision: Drehpunkt liegt hinten (Traktionsräder) — der Rumpf ragt nach vorn weiter hinaus', () => {
+  // Rumpf 40 m, Drehpunkt 4,8 m hinter der Mitte: vorn ragt er 24,8 m (+ Pflug), hinten 15,2 m.
+  const { state, k } = testwelt();
+  setzeAn(k, 0, 300, SUEDEN); // Fels beginnt bei 360 m im Süden
+  pruefe(lageFrei(state.seed, k.x, 338e6, SUEDEN) === false, "Bug ragt 22 m vor dem Fels nicht hinein");
+  pruefe(lageFrei(state.seed, k.x, 338e6, NORDEN) === true, "Heck ragt 22 m vor dem Fels schon hinein");
+});

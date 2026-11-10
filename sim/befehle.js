@@ -6,7 +6,7 @@
  *           ob ein Befehl erlaubt ist, und dann der Zustand geändert. So kann der Server später
  *           jeden Befehl genauso prüfen wie das Einzelspiel.
  * LIEST:    state.spieler, state.kolosse, data/koloss.js
- * SCHREIBT: state.spieler, state.kolosse (Steuerwerte, Druck)
+ * SCHREIBT: state.spieler, state.kolosse (Steuerwerte, Druck, Telegraf, Licht)
  * REGEL:    KONZEPT.md §8 Regel 4, CLAUDE.md Regel 1
  * DEBUG:    Abgelehnte Befehle landen mit Grund in der Konsole (game/spiel.js).
  *           Neuen Befehl? Typ in sim/types.js, Prüfung + Wirkung hier, Test in tests/befehle.test.js.
@@ -14,9 +14,9 @@
 
 import {
   DRUCKSTUFEN, START_DRUCK, START_X, START_Y, START_RICHTUNG, EINGABE_MAX, KOLOSS_BREITE_M, UM_PRO_METER,
-  TEMPOMAT_MIN_KMH, TEMPOMAT_MAX_KMH, TEMPO_EIN_KMH,
+  TELEGRAF, TELEGRAF_STOPP,
 } from '../data/koloss.js';
-import { kolossVon, laengsTempo } from './abfragen.js';
+import { kolossVon } from './abfragen.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 /** @typedef {import('./types.js').Befehl} Befehl */
@@ -50,16 +50,12 @@ export function befehlPruefen(state, b) {
     if (!ganzImBereich(b.stufe, 0, DRUCKSTUFEN.length - 1)) return 'unbekannte Druckstufe';
     return null;
   }
-  if (b.art === 'TEMPOMAT') {
+  if (b.art === 'TELEGRAF') {
+    if (!ganzImBereich(b.stufe, 0, TELEGRAF.length - 1)) return 'unbekannte Telegrafen-Stellung';
+    return null;
+  }
+  if (b.art === 'LICHT') {
     if (typeof b.an !== 'boolean') return 'an muss ja/nein sein';
-    const k = /** @type {import('./types.js').Koloss} */ (kolossVon(state, b.spieler));
-    if (b.kmh !== undefined) {
-      // Schieberegler: festes Zieltempo, geht auch aus dem Stand (der Koloss fährt dann an).
-      if (!b.an) return 'Zieltempo nur beim Einschalten';
-      if (!ganzImBereich(b.kmh, TEMPOMAT_MIN_KMH, TEMPOMAT_MAX_KMH)) return `Zieltempo ${TEMPOMAT_MIN_KMH}–${TEMPOMAT_MAX_KMH} km/h`;
-      return null;
-    }
-    if (b.an && laengsTempo(k) < TEMPOMAT_MIN_KMH * TEMPO_EIN_KMH) return `erst ab ${TEMPOMAT_MIN_KMH} km/h vorwärts`;
     return null;
   }
   return 'unbekannter Befehl';
@@ -82,7 +78,7 @@ export function befehlAnwenden(state, b) {
     state.kolosse.push({
       id, besitzer: b.spieler, name: b.name,
       x: START_X + versatz, y: START_Y, vx: 0, vy: 0, h: START_RICHTUNG, dreh: 0,
-      druck: START_DRUCK, gas: 0, lenkung: 0, tempomat: 0, antrieb: 0,
+      druck: START_DRUCK, gas: 0, lenkung: 0, telegraf: TELEGRAF_STOPP, antrieb: 0, licht: 0,
     });
     state.spieler.push({ id: b.spieler, name: b.name, koloss: id });
     return { ok: true };
@@ -90,19 +86,14 @@ export function befehlAnwenden(state, b) {
 
   const k = /** @type {import('./types.js').Koloss} */ (kolossVon(state, b.spieler));
   if (b.art === 'STEUERN') {
-    // Tempo halten: Bremsen (S) schaltet es aus. Gibt man selbst Gas (W) und lässt wieder los,
-    // wird das dann erreichte Tempo das neue Ziel — wie beim Tempomat im Auto.
-    if (k.tempomat > 0 && b.gas < 0) k.tempomat = 0;
-    else if (k.tempomat > 0 && k.gas > 0 && b.gas === 0) {
-      k.tempomat = Math.max(laengsTempo(k), TEMPOMAT_MIN_KMH * TEMPO_EIN_KMH);
-    }
     k.gas = b.gas;
     k.lenkung = b.lenkung;
   } else if (b.art === 'DRUCK') {
     k.druck = b.stufe;
-  } else if (b.art === 'TEMPOMAT') {
-    if (b.kmh !== undefined) k.tempomat = b.kmh * TEMPO_EIN_KMH;
-    else k.tempomat = b.an ? laengsTempo(k) : 0;
+  } else if (b.art === 'TELEGRAF') {
+    k.telegraf = b.stufe;
+  } else if (b.art === 'LICHT') {
+    k.licht = b.an ? 1 : 0; // Ganzzahl im Zustand (CLAUDE.md Regel 3)
   }
   return { ok: true };
 }

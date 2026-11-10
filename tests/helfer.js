@@ -29,13 +29,14 @@ export function testwelt(seed = 0) {
 }
 
 /**
- * Setzt Gas/Lenkung/Druck über echte Befehle und fährt n Ticks.
+ * Setzt Gas/Lenkung/Druck/Telegraf über echte Befehle und fährt n Ticks.
  * @param {Zustand} state
- * @param {{gas?: number, lenkung?: number, druck?: number}} steuer
+ * @param {{gas?: number, lenkung?: number, druck?: number, telegraf?: number}} steuer
  * @param {number} ticks
  */
 export function fahre(state, steuer, ticks) {
   if (steuer.druck !== undefined) pflicht(befehlAnwenden(state, { art: 'DRUCK', spieler: 0, stufe: steuer.druck }));
+  if (steuer.telegraf !== undefined) pflicht(befehlAnwenden(state, { art: 'TELEGRAF', spieler: 0, stufe: steuer.telegraf }));
   pflicht(befehlAnwenden(state, { art: 'STEUERN', spieler: 0, gas: steuer.gas ?? 0, lenkung: steuer.lenkung ?? 0 }));
   for (let i = 0; i < ticks; i++) tickAusfuehren(state);
 }

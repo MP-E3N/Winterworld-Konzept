@@ -8,7 +8,7 @@
  * SCHREIBT: —
  */
 
-import { UM_PRO_METER, SCHUB } from '../data/koloss.js';
+import { UM_PRO_METER, SCHUB, SCHUB_RUECKWAERTS, TELEGRAF, TEMPO_EIN_KMH } from '../data/koloss.js';
 import { UNTERGRUND } from '../data/untergrund.js';
 import { untergrundAn } from './welt/untergrund.js';
 import { cosW, sinW, teile } from './lib/winkel.js';
@@ -65,13 +65,36 @@ export function alsMeter(um) {
 
 /**
  * Höchsttempo, das der Kessel auf der aktuellen Druckstufe und dem Boden unter dem Koloss mit
- * Vollgas erreicht (µm/Tick). Gleichgewicht Schub = Widerstand (siehe sim/koloss/fahren.js).
- * Für die Anzeige: Will „Tempo halten“ mehr, ist der Kessel überlastet.
+ * Vollgas erreicht (µm/Tick, Betrag). Gleichgewicht Schub = Widerstand (siehe sim/koloss/fahren.js).
+ * Für die Anzeige: Verlangt der Telegraf mehr, ist der Kessel überlastet.
  * @param {number} seed  Welt-Seed
+ * @param {Koloss} k
+ * @param {boolean} [rueckwaerts=false]
+ * @returns {number}
+ */
+export function hoechstTempo(seed, k, rueckwaerts = false) {
+  const u = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
+  const schub = rueckwaerts ? (k.druck > 0 ? SCHUB_RUECKWAERTS : 0) : SCHUB[k.druck];
+  return teile(schub * u.zug * 4096, u.widerstand * 100);
+}
+
+/**
+ * Zieltempo der aktuellen Telegrafen-Stellung (µm/Tick, < 0 = rückwärts).
  * @param {Koloss} k
  * @returns {number}
  */
-export function hoechstTempo(seed, k) {
-  const u = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
-  return teile(SCHUB[k.druck] * u.zug * 4096, u.widerstand * 100);
+export function telegrafZiel(k) {
+  return TELEGRAF[k.telegraf].kmh * TEMPO_EIN_KMH;
+}
+
+/**
+ * Kessel überlastet: Der Telegraf verlangt mehr Tempo, als der Kessel auf diesem Boden schafft
+ * (die Anzeige lässt dann die Manometer-Nadel zittern). Handgas zählt nicht.
+ * @param {number} seed @param {Koloss} k
+ * @returns {boolean}
+ */
+export function kesselUeberlastet(seed, k) {
+  const ziel = telegrafZiel(k);
+  if (k.gas !== 0 || ziel === 0) return false;
+  return Math.abs(ziel) > hoechstTempo(seed, k, ziel < 0);
 }

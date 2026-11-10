@@ -27,4 +27,4 @@ export const TEMPI = [1, 2, 4];
  * Version des Zustands-Schemas. Erhöhen, sobald sich Felder im Zustand ändern
  * (alte Spielstände werden dann nicht mehr geladen, Replays neu aufnehmen).
  */
-export const ZUSTAND_VERSION = 3; // v2: Wetter (Wind); v3: Tempo halten (tempomat, antrieb)
+export const ZUSTAND_VERSION = 5; // v2: Wetter (Wind); v3: Tempo halten; v4: Maschinentelegraf; v5: Scheinwerfer (licht), Drehpunkt

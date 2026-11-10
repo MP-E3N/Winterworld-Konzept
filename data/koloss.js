@@ -26,9 +26,20 @@ export function kmhZuTempo(kmh) {
   return Math.floor((kmh * 1000000) / 72);
 }
 
-/** Größe für Darstellung und (ab M2) Kollision, in Metern. */
-export const KOLOSS_LAENGE_M = 32;
+/** Größe für Darstellung und (ab M2) Kollision, in Metern.
+ * Spieltest M2b: 32 → 40 m (vorn Laderaum, neun statt sieben Radpaare). */
+export const KOLOSS_LAENGE_M = 40;
 export const KOLOSS_BREITE_M = 9;
+
+/**
+ * Drehpunkt (Spieltest M2b): Die Position (x, y) im Zustand ist NICHT die Rumpfmitte, sondern die
+ * Mitte zwischen den zwei ungelenkten Traktionsrädern — so wie bei einem Fahrzeug mit Allradlenkung, das
+ * sich um seine starre Achse dreht. Die Rumpfmitte liegt so viele Meter weiter vorn.
+ * WARUM: Seit der Verlängerung nach vorn sitzen die Traktionsräder hinter der Mitte. Drehte sich
+ * der Koloss um die Rumpfmitte, rutschten sie in jeder Kurve seitlich weg — das sah falsch aus.
+ * Darstellung (render/koloss-mass.js) und Kollision (sim/koloss/kollision.js) rechnen damit.
+ */
+export const RUMPF_VOR_DREHPUNKT_M = 4.8;
 
 /**
  * Kesseldruck-Stufen. `kmh` = Höchsttempo auf Packschnee bei Vollgas.
@@ -70,12 +81,20 @@ export const BREMSE = 3750;
 /** Zusätzliches Ausrollen ohne Gas (µm/Tick², 375 = 0,15 m/s²). */
 export const ROLLEN = 375;
 
-/** Höchste Drehgeschwindigkeit bei vollem Einschlag (Winkel pro Tick; 91 ≈ 10°/s).
- * Spieltest 4: vorher 137 (15°/s) war zu wendig für 400 Tonnen. */
-export const DREH_MAX = 91;
+/** Höchste Drehgeschwindigkeit (Winkel pro Tick; 64 ≈ 7°/s) — greift erst bei schneller Fahrt
+ * (ab ≈ 14 km/h bei vollem Einschlag). Spieltest 4: 137 → 91 (10°/s); Spieltest M2b: 91 → 64. */
+export const DREH_MAX = 64;
 
-/** Ab diesem Tempo lenkt der Koloss voll; darunter weniger, im Stand gar nicht. */
-export const TEMPO_VOLLE_LENKUNG = kmhZuTempo(8);
+/**
+ * Kleinster Kurvenradius bei vollem Einschlag (µm), gemessen am Drehpunkt (Spieltest M2b).
+ * WARUM ein Radius statt einer festen Drehrate: Ein Radfahrzeug dreht sich nur, während es rollt —
+ * je Meter Fahrt um denselben Winkel. Langsam fahren = langsam drehen, im Stand gar nicht.
+ * Erst bei schneller Fahrt begrenzt DREH_MAX die Drehung (dann wird der Bogen weiter).
+ */
+export const WENDE_RADIUS = 32 * UM_PRO_METER; // Spieltest M2b: 20 → 32 m (generell träger)
+
+/** Winkel-Einheiten je Bogenmaß (65536 / 2π ≈ 10430,4), für Bogen = Weg / Radius. */
+export const WINKEL_JE_RAD = 10430;
 
 /**
  * Wie schnell sich die Drehung dem Lenkwunsch nähert (Prozent pro Tick).
@@ -86,18 +105,41 @@ export const DREH_ANPASSUNG = 20;
 /** Ein km/h in µm pro Tick (für Regler und Anzeigen). */
 export const TEMPO_EIN_KMH = kmhZuTempo(1);
 
-/** „Tempo halten“ lässt sich erst ab diesem Tempo einschalten (km/h). */
-export const TEMPOMAT_MIN_KMH = 2;
+/**
+ * Maschinentelegraf wie auf alten Dampfschiffen (Spieltest M2b, ersetzt „Tempo halten“).
+ * W/S schalten eine Stufe weiter, die Maschine hält das Tempo der Stufe selbst.
+ * Index = Stellung im Zustand (k.telegraf). kmh < 0 = rückwärts.
+ * WARUM diese Tempi: Langsam/Halb/Voll/Äußerste = Höchsttempo der Kesselstufen 1–4 auf
+ * Packschnee — wer „Voll voraus“ will, braucht also mindestens „Stark“ im Kessel.
+ */
+export const TELEGRAF = [
+  { name: 'Voll zurück', kmh: -6 },
+  { name: 'Halb zurück', kmh: -4 },
+  { name: 'Langsam zurück', kmh: -2 },
+  { name: 'Stopp', kmh: 0 },
+  { name: 'Ganz langsam voraus', kmh: 4 },
+  { name: 'Langsam voraus', kmh: 10 },
+  { name: 'Halb voraus', kmh: 18 },
+  { name: 'Voll voraus', kmh: 26 },
+  { name: 'Äußerste Kraft voraus', kmh: 34 },
+];
 
-/** Höchstes einstellbares Zieltempo am Schieberegler (km/h) = Volldampf auf Packschnee. */
-export const TEMPOMAT_MAX_KMH = 34;
+/** Index von „Stopp“ in TELEGRAF (Startstellung). */
+export const TELEGRAF_STOPP = 3;
 
 /**
- * „Tempo halten“: so viel Prozent Gas zusätzlich je km/h unter dem Ziel.
+ * Telegraf-Regelung: so viel Prozent Gas zusätzlich je km/h Abweichung vom Ziel.
  * WARUM 50: Kräftig genug, dass das Tempo nach Untergrundwechsel schnell wieder stimmt,
- * aber ohne Pendeln (Gas wird ohnehin auf 0 … 100 begrenzt).
+ * aber ohne Pendeln.
  */
-export const TEMPOMAT_KORREKTUR = 50;
+export const TELEGRAF_KORREKTUR = 50;
+
+/**
+ * Höchstens so stark bremst die Maschine beim Herunterschalten (Prozent der vollen Bremse,
+ * 20 = 0,3 m/s²; dazu kommt der Fahrwiderstand). WARUM nicht voll: Von „Voll“ auf „Langsam“
+ * soll der Koloss sichtbar auslaufen, nicht stempeln. Beim Richtungswechsel bremst er voll.
+ */
+export const TELEGRAF_BREMSE = 20;
 
 /** Wertebereich von Gas und Lenkung in STEUERN-Befehlen (Tastatur = ±100, Gamepad später feiner). */
 export const EINGABE_MAX = 100;

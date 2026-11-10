@@ -185,7 +185,7 @@ Konzeptbilds — grüner Rumpf, schwarze Kessel, Kupfer, rote Räder. Echte Spri
 
 | Eingabe | Wirkung |
 |---|---|
-| **W / S** | Gas / Bremse–Rückwärts |
+| **W / S** | Maschinentelegraf eine Stellung voraus / zurück; die Maschine hält das Tempo (Spieltest M2b) |
 | **A / D** | lenken |
 | **1–4** oder **Q / E** | Kesseldruck runter/rauf |
 | **Linksklick** auf Fundstelle | Bergen starten (wenn in Reichweite), sonst Wegmarke setzen |
@@ -193,6 +193,7 @@ Konzeptbilds — grüner Rumpf, schwarze Kessel, Kupfer, rote Räder. Echte Spri
 | **Rechtsklick** | Wegmarke / Kontextmenü |
 | **Mausrad** | Zoom |
 | **Leertaste** | Kamera zurück zum Koloss |
+| **L** | Scheinwerfer an/aus (auch Lichtschalter in der Anzeige; nachts/im Sturm später nötig) |
 | **F3** | Debug-Anzeige |
 
 Bergen läuft **im Stand oder Schritttempo**: Fährt man weg, bricht der Trupp ab.

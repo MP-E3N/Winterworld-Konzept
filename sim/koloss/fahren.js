@@ -5,7 +5,7 @@
  * ZWECK:    Aus Gas, Lenkung, Kesseldruck und Untergrund das neue Tempo, die neue Richtung und
  *           die neue Position berechnen. Schwer und träge: langsames Anfahren, langer Bremsweg,
  *           auf Eis rutscht der Koloss seitlich weg.
- * LIEST:    k.gas, k.lenkung, k.druck, k.tempomat, Untergrund an der Position (Seed), data/koloss.js
+ * LIEST:    k.gas, k.lenkung, k.druck, k.telegraf, Untergrund an der Position (Seed), data/koloss.js
  * SCHREIBT: k.x, k.y, k.vx, k.vy, k.h, k.dreh, k.antrieb
  * REGEL:    KONZEPT.md §3 „Fahrgefühl“, CLAUDE.md Regeln 2+3 (nur Ganzzahlen)
  * DEBUG:    F3 zeigt Längs-/Quertempo und Untergrund. Zum Nachstellen: `ek.step(n)` und
@@ -22,8 +22,8 @@
  */
 
 import {
-  SCHUB, SCHUB_RUECKWAERTS, BREMSE, ROLLEN, DREH_MAX, TEMPO_VOLLE_LENKUNG, DREH_ANPASSUNG, EINGABE_MAX,
-  TEMPOMAT_KORREKTUR, TEMPO_EIN_KMH,
+  SCHUB, SCHUB_RUECKWAERTS, BREMSE, ROLLEN, DREH_MAX, WENDE_RADIUS, WINKEL_JE_RAD, DREH_ANPASSUNG, EINGABE_MAX,
+  TELEGRAF, TELEGRAF_KORREKTUR, TELEGRAF_BREMSE, TEMPO_EIN_KMH,
 } from '../../data/koloss.js';
 import { UNTERGRUND } from '../../data/untergrund.js';
 import { untergrundAn } from '../welt/untergrund.js';
@@ -56,10 +56,11 @@ export function fahrSchritt(k, seed) {
   quer -= teile(quer * u.haftung, 4096);
 
   // ── 4. Lenken ─────────────────────────────────────────
-  // Gewünschte Drehung: voller Einschlag erst ab TEMPO_VOLLE_LENKUNG, im Stand keine.
+  // Gewünschte Drehung = gefahrener Weg / Kurvenradius (Spieltest M2b): je langsamer, desto
+  // langsamer dreht er, im Stand gar nicht. Bei schneller Fahrt begrenzt DREH_MAX (weiterer Bogen).
   // Rückwärts dreht sich die Lenkung um (wie beim Auto).
-  const tempoAnteil = klemme(Math.abs(laengs), 0, TEMPO_VOLLE_LENKUNG);
-  let ziel = teile(teile(k.lenkung * DREH_MAX, EINGABE_MAX) * tempoAnteil, TEMPO_VOLLE_LENKUNG);
+  const bogen = teile(teile(k.lenkung * Math.abs(laengs), EINGABE_MAX) * WINKEL_JE_RAD, WENDE_RADIUS);
+  let ziel = klemme(bogen, -DREH_MAX, DREH_MAX);
   ziel = teile(ziel * u.lenken, 100);
   if (laengs < 0) ziel = -ziel;
   k.dreh += drehSchritt(ziel - k.dreh);
@@ -94,9 +95,10 @@ function drehSchritt(rest) {
 }
 
 /**
- * Gas, das tatsächlich wirkt: Gibt der Spieler selbst Gas oder bremst, zählt das. Sonst hält
- * „Tempo halten“ (k.tempomat) das Zieltempo — so viel Gas, dass der Schub den Widerstand beim
- * Zieltempo ausgleicht (Vorsteuerung), plus eine Korrektur je km/h Abweichung.
+ * Gas, das tatsächlich wirkt. Handgas (k.gas ≠ 0, nur Tests und später Gamepad) geht vor.
+ * Sonst regelt die Maschine auf das Tempo der Telegrafen-Stellung: so viel Gas, dass der Schub
+ * den Widerstand beim Zieltempo ausgleicht (Vorsteuerung), plus eine Korrektur je km/h
+ * Abweichung. Ist sie zu schnell, wird die Korrektur negativ = bremsen.
  * WARUM Vorsteuerung: Nur mit Korrektur pendelt sich das Tempo spürbar unter dem Ziel ein.
  * @param {Koloss} k
  * @param {number} laengs  aktuelles Längstempo (µm/Tick)
@@ -105,11 +107,17 @@ function drehSchritt(rest) {
  * @returns {number} −100 … 100
  */
 function wirksamesGas(k, laengs, zug, widerstand) {
-  if (k.tempomat === 0 || k.gas !== 0) return k.gas;
-  if (SCHUB[k.druck] === 0 || zug === 0) return 0;
-  const halten = teile(k.tempomat * widerstand * EINGABE_MAX * 100, 4096 * SCHUB[k.druck] * zug);
-  const korrektur = teile((k.tempomat - laengs) * TEMPOMAT_KORREKTUR, TEMPO_EIN_KMH);
-  return klemme(halten + korrektur, 0, EINGABE_MAX);
+  if (k.gas !== 0) return k.gas;
+  const ziel = TELEGRAF[k.telegraf].kmh * TEMPO_EIN_KMH; // µm/Tick, < 0 = rückwärts
+  const schub = ziel >= 0 ? SCHUB[k.druck] : (k.druck > 0 ? SCHUB_RUECKWAERTS : 0);
+  const halten = schub === 0 || zug === 0 ? 0
+    : teile(Math.abs(ziel) * widerstand * EINGABE_MAX * 100, 4096 * schub * zug);
+  const korrektur = teile((ziel - laengs) * TELEGRAF_KORREKTUR, TEMPO_EIN_KMH);
+  const gas = (ziel > 0 ? halten : -halten) + korrektur;
+  // Herunterschalten bremst sanft; nur wer die Richtung wechselt, bremst voll.
+  const unten = ziel >= 0 ? -TELEGRAF_BREMSE : -EINGABE_MAX;
+  const oben = ziel <= 0 ? TELEGRAF_BREMSE : EINGABE_MAX;
+  return klemme(gas, unten, oben);
 }
 
 /**

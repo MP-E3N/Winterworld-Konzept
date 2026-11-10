@@ -15,13 +15,13 @@
 
 import { befahrbarAn } from '../welt/untergrund.js';
 import { cosW, sinW, teile, TRIG_EINS } from '../lib/winkel.js';
-import { KOLOSS_LAENGE_M, KOLOSS_BREITE_M, UM_PRO_METER } from '../../data/koloss.js';
+import { KOLOSS_LAENGE_M, KOLOSS_BREITE_M, UM_PRO_METER, RUMPF_VOR_DREHPUNKT_M } from '../../data/koloss.js';
 
 /** @typedef {import('../types.js').Koloss} Koloss */
 
 /**
- * Prüfpunkte im Fahrzeug-Koordinatensystem (µm, +x = vorne, +y = rechts): beide Seiten alle 4 m,
- * dazu Bugspitze und Heckmitte. WARUM alle 4 m: Zellen sind 4 m groß — so rutscht keine Ecke
+ * Prüfpunkte im Fahrzeug-Koordinatensystem (µm, +x = vorne, +y = rechts, Ursprung = Drehpunkt,
+ * siehe RUMPF_VOR_DREHPUNKT_M): beide Seiten alle 4 m, dazu Bugspitze und Heckmitte. WARUM alle 4 m: Zellen sind 4 m groß — so rutscht keine Ecke
  * zwischen zwei Punkten in eine Felszelle.
  * @type {readonly [number, number][]}
  */
@@ -34,7 +34,9 @@ const PRUEFPUNKTE = (() => {
   }
   punkte.push([halbL, -halbB], [halbL, halbB]);         // vordere Ecken
   punkte.push([halbL + 1.5 * UM_PRO_METER, 0], [-halbL, 0]); // Bugspitze (Pflug), Heck
-  return punkte;
+  // Vom Rumpf-Ursprung auf den Drehpunkt umrechnen: Der Rumpf liegt vor dem Drehpunkt.
+  const vor = RUMPF_VOR_DREHPUNKT_M * UM_PRO_METER;
+  return punkte.map(([x, y]) => /** @type {[number, number]} */ ([x + vor, y]));
 })();
 
 /**

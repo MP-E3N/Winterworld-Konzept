@@ -70,5 +70,9 @@ Datei < 300 Zeilen (harte Grenze 400), Funktion < 50 Zeilen. Erst suchen, dann s
 - **„Annähern um x %“ mit Ganzzahlen bleibt kurz vor dem Ziel hängen:** 20 % von 4 = 0,8 →
   abgeschnitten 0. So drehte sich der Koloss ewig mit Drehung −4 (Spieltest 1). Bei jeder
   prozentualen Annäherung mindestens ±1 Schritt gehen (`drehSchritt()` in `sim/koloss/fahren.js`).
+- **Viele halbdurchsichtige Bildchen jedes Bild neu malen bremst massiv** (Spieltest M2b: 16
+  Bilder/s im Rußfeld). Dauerhaftes (Dreck, Abdrücke) einmal in Welt-Kacheln einbrennen
+  (`render/schmutz.js` `stempeln()`), große weiche Teilchen (Rauch) in halber Auflösung malen.
+  Leistung in der VERSTECKTEN Vorschau schwankt stark — mehrmals messen, Tendenz zählt.
 - **Das Tempo dreht nicht mit dem Bug mit** (`sim/koloss/fahren.js` Schritt 5). Wer das „repariert“,
   macht Eis so griffig wie Schnee. Der Test „auf Eis folgt die Bewegung der Lenkung kaum“ fängt das.

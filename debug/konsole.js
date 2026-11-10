@@ -9,6 +9,7 @@
  *             ek.untergrund()   Untergrund unter dem eigenen Koloss
  *             ek.neu(seed)      neue Welt (0 = Testgelände)
  *             ek.kacheln()      Gelände-Kacheln der Darstellung
+ *             ek.nacht(x)       Dunkelheit 0 … 1 zum Testen der Scheinwerfer (ek.nacht(0) = Tag)
  *             ek.replay()       Protokoll dieser Fahrt als JSON (für Fehlerberichte)
  *             ek.kamera, ek.spiel, ek.verbindung, ek.optik()
  * LIEST:    das Spiel
@@ -23,6 +24,7 @@ import { UNTERGRUND } from '../data/untergrund.js';
 import { kamera } from '../render/kamera.js';
 import { optikZahlen } from '../render/spuren.js';
 import { kachelZahlen } from '../render/welt.js';
+import { ansichtLicht } from '../render/licht.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -53,6 +55,9 @@ export function konsoleEinrichten(spielHolen, neueWelt) {
     },
     optik: optikZahlen,
     kacheln: kachelZahlen,
+    /** Dunkelheit zum Ausprobieren der Scheinwerfer (0 = Tag … 1 = Nacht); ab M4 macht das die Tageszeit.
+     * @param {number} [wert=0.85] */
+    nacht(wert = 0.85) { ansichtLicht.nacht = Math.max(0, Math.min(1, wert)); return ansichtLicht.nacht; },
   };
   /** @type {any} */ (window).ek = ek;
 }

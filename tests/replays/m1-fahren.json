@@ -1,7 +1,7 @@
 {
  "seed": 0,
  "ticks": 1800,
- "hash": "48217f85",
+ "hash": "1b8da881",
  "protokoll": [
   {
    "tick": 0,
@@ -67,9 +67,9 @@
   {
    "tick": 900,
    "befehl": {
-    "art": "TEMPOMAT",
+    "art": "TELEGRAF",
     "spieler": 0,
-    "an": true
+    "stufe": 7
    }
   },
   {
@@ -92,10 +92,9 @@
   {
    "tick": 1100,
    "befehl": {
-    "art": "STEUERN",
+    "art": "TELEGRAF",
     "spieler": 0,
-    "gas": -100,
-    "lenkung": 0
+    "stufe": 1
    }
   },
   {
@@ -103,12 +102,20 @@
    "befehl": {
     "art": "STEUERN",
     "spieler": 0,
-    "gas": -100,
+    "gas": 0,
     "lenkung": -100
    }
   },
   {
    "tick": 1550,
+   "befehl": {
+    "art": "TELEGRAF",
+    "spieler": 0,
+    "stufe": 3
+   }
+  },
+  {
+   "tick": 1551,
    "befehl": {
     "art": "STEUERN",
     "spieler": 0,

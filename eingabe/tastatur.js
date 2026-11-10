@@ -2,9 +2,9 @@
 /**
  * tastatur.js — Übersetzt Tasten in Befehle.
  *
- * ZWECK:    WASD/Pfeile → STEUERN (nur wenn sich etwas ändert), Q/E → DRUCK, R → TEMPOMAT
- *           (Tempo halten), dazu Pause, Spieltempo,
- *           Zoom und Kamera. Die Tastatur schreibt NIE in den Zustand, sie schickt nur Befehle
+ * ZWECK:    W/S (↑/↓) → TELEGRAF eine Stellung vor/zurück (Maschinentelegraf, Spieltest M2b),
+ *           A/D (←/→) → STEUERN (nur wenn sich etwas ändert), Q/E → DRUCK, L → LICHT, dazu Pause,
+ *           Spieltempo, Zoom und Kamera. Die Tastatur schreibt NIE in den Zustand, sie schickt nur Befehle
  *           an die Verbindung — genau wie später übers Netz.
  * LIEST:    Tastaturereignisse, Zustand (eigener Koloss) über die Verbindung
  * SCHREIBT: Befehle über verbindung.senden(), Kamera
@@ -15,7 +15,7 @@
  */
 
 import { kolossVon } from '../sim/abfragen.js';
-import { DRUCKSTUFEN, EINGABE_MAX } from '../data/koloss.js';
+import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF } from '../data/koloss.js';
 import { TEMPI } from '../data/takt.js';
 import { kamera, zoomen } from '../render/kamera.js';
 import { ZOOM_SCHRITT } from '../data/ansicht.js';
@@ -29,6 +29,9 @@ let gesendet = { gas: 0, lenkung: 0 };
 /** Gewünschte Druckstufe, die noch nicht im Zustand angekommen ist (oder null). */
 /** @type {number | null} */
 let druckUnterwegs = null;
+/** Gewünschte Telegrafen-Stellung, die noch nicht im Zustand angekommen ist (oder null). */
+/** @type {number | null} */
+let telegrafUnterwegs = null;
 
 /**
  * Richtet die Tastatur ein. NUR EINMAL aufrufen.
@@ -43,8 +46,10 @@ export function tastaturEinrichten(spielHolen, hilfeUmschalten) {
     if (ev.repeat) return;
     switch (ev.code) {
       case 'KeyQ': druckAendern(spiel, -1); break;
+      case 'KeyL': lichtUmschalten(spiel); break;
       case 'KeyE': druckAendern(spiel, +1); break;
-      case 'KeyR': tempoHaltenUmschalten(spiel); break;
+      case 'KeyW': case 'ArrowUp': telegrafSchalten(spiel, +1); break;
+      case 'KeyS': case 'ArrowDown': telegrafSchalten(spiel, -1); break;
       case 'KeyP': spiel.verbindung.pauseSetzen(!spiel.verbindung.pausiert()); break;
       case 'KeyT': tempoWeiter(spiel); break;
       case 'Space': kamera.folgen = true; ev.preventDefault(); break;
@@ -68,17 +73,17 @@ export function steuerungSenden(spiel) {
   const v = spiel.verbindung;
   const k = kolossVon(v.zustand(), v.spieler);
   if (!k) return;
-  const vor = gedrueckt.has('KeyW') || gedrueckt.has('ArrowUp');
-  const zurueck = gedrueckt.has('KeyS') || gedrueckt.has('ArrowDown');
   const links = gedrueckt.has('KeyA') || gedrueckt.has('ArrowLeft');
   const rechts = gedrueckt.has('KeyD') || gedrueckt.has('ArrowRight');
-  const gas = (vor ? EINGABE_MAX : 0) - (zurueck ? EINGABE_MAX : 0);
+  // Gas regelt die Maschine nach dem Telegrafen — die Tastatur gibt nie Handgas.
+  const gas = 0;
   const lenkung = (rechts ? EINGABE_MAX : 0) - (links ? EINGABE_MAX : 0);
   if (gas !== gesendet.gas || lenkung !== gesendet.lenkung) {
     gesendet = { gas, lenkung };
     v.senden({ art: 'STEUERN', spieler: v.spieler, gas, lenkung });
   }
   if (druckUnterwegs !== null && k.druck === druckUnterwegs) druckUnterwegs = null;
+  if (telegrafUnterwegs !== null && k.telegraf === telegrafUnterwegs) telegrafUnterwegs = null;
 }
 
 /**
@@ -87,6 +92,7 @@ export function steuerungSenden(spiel) {
 export function tastaturZuruecksetzen() {
   gesendet = { gas: 0, lenkung: 0 };
   druckUnterwegs = null;
+  telegrafUnterwegs = null;
 }
 
 /**
@@ -107,24 +113,43 @@ function druckAendern(spiel, richtung) {
 }
 
 /**
- * „Tempo halten“ ein- oder ausschalten (Taste R oder Knopf in der Anzeige).
+ * Maschinentelegraf eine Stellung weiter (W = Richtung „Äußerste Kraft voraus“, S = Richtung
+ * „Voll zurück“). Ein Tastendruck = eine Stellung; Halten wiederholt nicht.
+ * WARUM telegrafUnterwegs: wie beim Druck — zweimal schnell W soll zwei Stellungen weiter gehen.
  * @param {Spiel} spiel
+ * @param {number} richtung  −1 oder +1
  */
-export function tempoHaltenUmschalten(spiel) {
+function telegrafSchalten(spiel, richtung) {
   const v = spiel.verbindung;
   const k = kolossVon(v.zustand(), v.spieler);
   if (!k) return;
-  v.senden({ art: 'TEMPOMAT', spieler: v.spieler, an: k.tempomat === 0 });
+  telegrafSetzen(spiel, (telegrafUnterwegs ?? k.telegraf) + richtung);
 }
 
 /**
- * Zieltempo vom Schieberegler: schaltet „Tempo halten“ mit genau diesem Tempo ein.
+ * Stellt den Telegrafen auf eine Stellung (Tastatur oder Klick auf den Telegrafen).
  * @param {Spiel} spiel
- * @param {number} kmh  ganze km/h
+ * @param {number} stufe  Index in TELEGRAF (wird auf den gültigen Bereich begrenzt)
  */
-export function zieltempoSetzen(spiel, kmh) {
+export function telegrafSetzen(spiel, stufe) {
   const v = spiel.verbindung;
-  v.senden({ art: 'TEMPOMAT', spieler: v.spieler, an: true, kmh });
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (!k) return;
+  const ziel = Math.max(0, Math.min(TELEGRAF.length - 1, stufe));
+  if (ziel === (telegrafUnterwegs ?? k.telegraf)) return;
+  telegrafUnterwegs = ziel;
+  v.senden({ art: 'TELEGRAF', spieler: v.spieler, stufe: ziel });
+}
+
+/**
+ * Scheinwerfer an/aus (Taste L oder Lichtschalter in der Anzeige).
+ * @param {Spiel} spiel
+ */
+export function lichtUmschalten(spiel) {
+  const v = spiel.verbindung;
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (!k) return;
+  v.senden({ art: 'LICHT', spieler: v.spieler, an: k.licht === 0 });
 }
 
 /** @param {Spiel} spiel */

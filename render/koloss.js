@@ -2,31 +2,33 @@
 /**
  * koloss.js — Zeichnet einen Dampfkoloss von oben.
  *
- * ZWECK:    Nah: detaillierte Zeichnung (grüner Rumpf, schwarze Kessel, Kupferrohre, rote Räder,
- *           Schornstein). Fern: kleines Symbol, damit man ihn auf der Weltkarte findet.
- * LIEST:    Lage (Meter, Bogenmaß), Kamera, data/ansicht.js, data/koloss.js
+ * ZWECK:    Nah: detaillierte Zeichnung (Schatten, Räder, Fahrgestell, Rumpf, Kessel, Aufbau mit
+ *           Scheinwerfern). Fern: kleines Symbol, damit man ihn auf der Weltkarte findet.
+ * LIEST:    Rumpflage (Meter, Bogenmaß), Kamera, render/koloss-mass.js, data/ansicht.js
  * SCHREIBT: nur das Canvas
  * REGEL:    KONZEPT.md §6 („Grafik am Anfang: alles per Code gezeichnet“)
- * DEBUG:    Zeichnung kaputt? Alles läuft in Metern im Fahrzeug-Koordinatensystem:
- *           +x = vorne, +y = rechts, Mitte = (0, 0). Länge 32, Breite 9.
+ * DEBUG:    Gezeichnet wird um die RUMPFmitte (rumpfLage() aus der Lage des Drehpunkts). Alles in
+ *           Metern im Rumpf-System: +x = vorne, +y = rechts. Länge 40, Breite 9 (+ Mittelteil).
  */
 
 import { kamera, weltZuBild } from './kamera.js';
 import { FARBEN_KOLOSS as F, KOLOSS_SYMBOL_AB_PX, SCHATTEN_PRO_HOEHE, RAD_DURCHMESSER_M, RAD_EINSCHLAG_MAX,
-  RAD_BREITE_M, TRAKTION_UEBERSTAND_M } from '../data/ansicht.js';
-import { KOLOSS_LAENGE_M, KOLOSS_BREITE_M } from '../data/koloss.js';
-
-const L = KOLOSS_LAENGE_M;
-const B = KOLOSS_BREITE_M;
+  RAD_BREITE_M, LENKRAD_BREITE_M, TRAKTION_UEBERSTAND_M, MITTE_BREITER_M, TRAKTION_DURCHMESSER_M } from '../data/ansicht.js';
+import { rundRechteck } from './formen.js';
+import { L, B, RAD_X, TRAKTION, EINSCHLAG, MITTE_VON, MITTE_BIS, SCHORNSTEIN_X, DOM_X, NEBEN_SCHORNSTEINE,
+  rumpfPunkt } from './koloss-mass.js';
+import { fahrgestell, rumpf, kessel, aufbau, feuerGlut } from './koloss-aufbau.js';
 
 /**
  * @param {CanvasRenderingContext2D} ctx
- * @param {{x: number, y: number, h: number}} lage
+ * @param {{x: number, y: number, h: number}} lage  RUMPFmitte (render/koloss-mass.js rumpfLage)
  * @param {number} weg     gefahrene Meter (für die Raddrehung)
  * @param {boolean} eigener  eigener Koloss (anderes Symbol in der Ferne)
  * @param {number} lenk     Radeinschlag (Bogenmaß, aus radEinschlagAktualisieren)
+ * @param {boolean} licht   Scheinwerfer an
+ * @param {number} last     0 … 1, wie hart die Maschine arbeitet (Feuerschein in den Schornsteinen)
  */
-export function kolossZeichnen(ctx, lage, weg, eigener, lenk) {
+export function kolossZeichnen(ctx, lage, weg, eigener, lenk, licht, last) {
   const [bx, by] = weltZuBild(lage.x, lage.y);
   if (L * kamera.zoom < KOLOSS_SYMBOL_AB_PX) { symbolZeichnen(ctx, bx, by, lage.h, eigener); return; }
   ctx.save();
@@ -34,21 +36,56 @@ export function kolossZeichnen(ctx, lage, weg, eigener, lenk) {
   ctx.rotate(lage.h);
   ctx.scale(kamera.zoom, kamera.zoom);
   schatten(ctx, lage.h);
-  raeder(ctx, weg, lenk);
-  rahmen(ctx);
-  kessel(ctx);
-  aufbau(ctx);
+  // WARUM zwei Durchgänge: die Traktionsräder liegen außen neben dem Fahrgestell, die Lenkräder
+  // reichen weit darunter — sie liegen über dem schwarzen Gestell, aber unter dem grünen Rumpf.
+  raeder(ctx, weg, lenk, true);
+  fahrgestell(ctx);
+  raeder(ctx, weg, lenk, false);
+  rumpf(ctx);
+  kessel(ctx, last);
+  aufbau(ctx, licht, last);
   ctx.restore();
 }
 
 /**
+ * Feuerschein der Schornsteine ÜBER dem Rauch (nach rauchZeichnen aufrufen). WARUM: Der eigene
+ * Rauch quillt genau aus dem Schornstein und deckte den Schein im Inneren fast ganz zu (Spieltest
+ * M2b). Ein heller Kern und ein warmer Hof leuchten jetzt durch den Qualm — je mehr Last, desto mehr.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{x: number, y: number, h: number}} lage  Rumpfmitte
+ * @param {number} last  0 … 1
+ */
+export function feuerscheinZeichnen(ctx, lage, last) {
+  if (L * kamera.zoom < KOLOSS_SYMBOL_AB_PX) return;
+  const glut = feuerGlut(last);
+  const quellen = [{ x: SCHORNSTEIN_X, y: 0, r: 1.05, glut }];
+  for (const n of NEBEN_SCHORNSTEINE) quellen.push({ x: n.x, y: n.y, r: n.r * 0.62, glut: glut * 0.7 });
+  for (const q of quellen) {
+    const [wx, wy] = rumpfPunkt(lage, q.x, q.y);
+    const [bx, by] = weltZuBild(wx, wy);
+    const hof = q.r * 3 * kamera.zoom, kern = q.r * 0.75 * kamera.zoom;
+    const g = ctx.createRadialGradient(bx, by, 0, bx, by, hof);
+    g.addColorStop(0, `rgba(255, 190, 90, ${0.6 * q.glut})`);
+    g.addColorStop(0.4, `rgba(255, 120, 30, ${0.3 * q.glut})`);
+    g.addColorStop(1, 'rgba(255, 90, 20, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(bx, by, hof, 0, Math.PI * 2); ctx.fill();
+    const c = ctx.createRadialGradient(bx, by, 0, bx, by, kern);
+    c.addColorStop(0, `rgba(255, 250, 225, ${q.glut})`);
+    c.addColorStop(0.5, `rgba(255, 205, 100, ${0.8 * q.glut})`);
+    c.addColorStop(1, 'rgba(255, 140, 40, 0)');
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(bx, by, kern, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+/**
  * Position des Schornsteins in Weltmetern (für den Rauch).
- * @param {{x: number, y: number, h: number}} lage
+ * @param {{x: number, y: number, h: number}} lage  Rumpfmitte
  * @returns {[number, number]}
  */
 export function schornsteinPos(lage) {
-  const vor = 2; // Meter vor der Mitte
-  return [lage.x + Math.cos(lage.h) * vor, lage.y + Math.sin(lage.h) * vor];
+  return rumpfPunkt(lage, SCHORNSTEIN_X, 0);
 }
 
 // ── Teile (alle in Fahrzeugmetern) ────────────────────────
@@ -74,43 +111,50 @@ function schatten(ctx, h) {
   ctx.fill();
   rundRechteck(ctx, -L / 2 + rx, -B / 2 + ry, L, B, 2);
   ctx.fill();
-  // Schornstein (≈ 9 m): Säule → Streifen vom Fuß bis zur Spitze.
-  const [sx, sy] = versatz(9);
+  const bm = B + 2 * MITTE_BREITER_M;
+  rundRechteck(ctx, MITTE_VON + rx, -bm / 2 + ry, MITTE_BIS - MITTE_VON, bm, 1.5);
+  ctx.fill();
+  // Schornstein (≈ 13 m, Spieltest M2b: höher und dicker): Säule → Streifen vom Fuß bis zur Spitze.
+  const [sx, sy] = versatz(13);
   ctx.strokeStyle = F.schatten;
   ctx.lineCap = 'round';
-  ctx.lineWidth = 3.0;
-  ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(2 + sx, sy); ctx.stroke();
+  ctx.lineWidth = 3.9;
+  ctx.beginPath(); ctx.moveTo(SCHORNSTEIN_X, 0); ctx.lineTo(SCHORNSTEIN_X + sx, sy); ctx.stroke();
+  // Kleiner Schornstein (≈ 8 m)
+  const [kx, ky] = versatz(8);
+  for (const n of NEBEN_SCHORNSTEINE) {
+    ctx.lineWidth = n.r * 2.4;
+    ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.x + kx, n.y + ky); ctx.stroke();
+  }
   // Dampfdom (≈ 6 m)
   const [dx, dy] = versatz(6);
-  ctx.beginPath(); ctx.arc(6.6 + dx, dy, 1.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(DOM_X + dx, dy, 1.3, 0, Math.PI * 2); ctx.fill();
 }
 
 /**
- * Sieben Radpaare. Von oben sieht man die Lauffläche: rot mit dunklen Querrillen.
+ * Radpaare einer Sorte. Von oben sieht man die Lauffläche: rot mit dunklen Querrillen.
  * Die Rillen laufen GENAU mit dem gefahrenen Weg mit (1 m Fahrt = 1 m Rillenweg), dadurch passt
- * die Raddrehung immer zum Tempo (Spieltest 3; vorher liefen sie viel zu langsam).
- * Allradlenkung: Die zwei vorderen Radsätze schwenken in die Kurve, die zwei hinteren gegen —
- * so wie bei langen Schwerlastfahrzeugen. Die drei mittleren bleiben gerade.
+ * die Raddrehung immer zum Tempo (Spieltest 3).
+ * Traktionsräder: zwei große, ungelenkt, breit nach AUSSEN über den Rumpf, am Mittelteil.
+ * Lenkräder: Spieltest M2b nach INNEN viel breiter (LENKRAD_BREITE_M), Außenkante bleibt.
+ * Allradlenkung um den Drehpunkt: vorne mit der Kurve, hinten dagegen (siehe EINSCHLAG).
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} weg
- * @param {number} lenk  Radeinschlag vorne (Bogenmaß, + = rechts)
+ * @param {number} lenk  Radeinschlag des vordersten Radsatzes (Bogenmaß, + = rechts)
+ * @param {boolean} traktion  true = nur Traktionsräder, false = nur Lenkräder
  */
-function raeder(ctx, weg, lenk) {
-  const durchmesser = RAD_DURCHMESSER_M, rille = 0.7;
-  /** Einschlag je Radsatz (Index 0 = hinten): hinten gegen, vorne mit der Kurve. */
-  const einschlag = [-1, -0.55, 0, 0, 0, 0.55, 1];
+function raeder(ctx, weg, lenk, traktion) {
+  const durchmesser = traktion ? TRAKTION_DURCHMESSER_M : RAD_DURCHMESSER_M, rille = 0.7;
   const versatz = ((weg % rille) + rille) % rille;
-  for (let i = 0; i < 7; i++) {
-    const mx = -12.5 + i * 3.9;
-    // Die drei mittleren Radsätze sind die Antriebs-(Traktions-)räder: viel breiter, und zwar
-    // nach AUSSEN über den Rumpf hinaus (Spieltest 4). Innenkante bleibt, wo sie war.
-    const traktion = einschlag[i] === 0;
-    const breite = traktion ? RAD_BREITE_M + TRAKTION_UEBERSTAND_M : RAD_BREITE_M;
+  const breite = traktion ? RAD_BREITE_M + TRAKTION_UEBERSTAND_M : LENKRAD_BREITE_M;
+  // Mitte quer: Traktionsrad innen an der Mittelteil-Kante; Lenkrad außen bündig mit dem Rumpf.
+  const quer = traktion ? B / 2 - RAD_BREITE_M + MITTE_BREITER_M + breite / 2 : B / 2 - breite / 2;
+  for (let i = 0; i < RAD_X.length; i++) {
+    if (TRAKTION[i] !== traktion) continue;
     for (const seite of [-1, 1]) {
-      const my = seite * (B / 2 - RAD_BREITE_M + breite / 2);
       ctx.save();
-      ctx.translate(mx, my);
-      ctx.rotate(lenk * einschlag[i]);
+      ctx.translate(RAD_X[i], seite * quer);
+      ctx.rotate(lenk * EINSCHLAG[i]);
       ctx.fillStyle = F.schwarz;
       rundRechteck(ctx, -durchmesser / 2 - 0.1, -breite / 2 - 0.1, durchmesser + 0.2, breite + 0.2, 0.3);
       ctx.fill();
@@ -124,13 +168,11 @@ function raeder(ctx, weg, lenk) {
         ctx.moveTo(x, -breite / 2); ctx.lineTo(x, breite / 2);
       }
       ctx.stroke();
-      if (traktion) {
-        // Doppelte Lauffläche: dunkle Mittelrille längs + Nabenring.
-        ctx.fillStyle = 'rgba(25, 8, 6, 0.75)';
-        ctx.fillRect(-durchmesser / 2, -0.09, durchmesser, 0.18);
-        ctx.strokeStyle = F.kupfer; ctx.lineWidth = 0.14;
-        ctx.strokeRect(-0.35, -breite / 2 + 0.12, 0.7, breite - 0.24);
-      }
+      // Doppelte Lauffläche: dunkle Mittelrille längs + Nabenring.
+      ctx.fillStyle = 'rgba(25, 8, 6, 0.75)';
+      ctx.fillRect(-durchmesser / 2, -0.09, durchmesser, 0.18);
+      ctx.strokeStyle = F.kupfer; ctx.lineWidth = 0.14;
+      ctx.strokeRect(-0.35, -breite / 2 + 0.12, 0.7, breite - 0.24);
       ctx.restore();
     }
   }
@@ -152,120 +194,6 @@ export function radEinschlagAktualisieren(id, lenkung, dtMs) {
   const neu = alt + (ziel - alt) * (1 - Math.exp(-dtMs / 180));
   radEinschlag[id] = neu;
   return neu;
-}
-
-/** @param {CanvasRenderingContext2D} ctx */
-function rahmen(ctx) {
-  // Fahrgestell
-  ctx.fillStyle = F.schwarz;
-  rundRechteck(ctx, -L / 2, -B / 2 + 0.9, L - 1.5, B - 1.8, 0.8);
-  ctx.fill();
-  // Schneepflug vorne (Keil)
-  ctx.fillStyle = F.grau;
-  ctx.beginPath();
-  ctx.moveTo(L / 2 - 2.2, -B / 2 + 0.4);
-  ctx.lineTo(L / 2 + 0.8, -0.6);
-  ctx.lineTo(L / 2 + 0.8, 0.6);
-  ctx.lineTo(L / 2 - 2.2, B / 2 - 0.4);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = F.schwarz;
-  ctx.lineWidth = 0.2;
-  ctx.stroke();
-  // Grüner Rumpf
-  const g = ctx.createLinearGradient(0, -B / 2, 0, B / 2);
-  g.addColorStop(0, F.gruenHell);
-  g.addColorStop(0.45, F.gruen);
-  g.addColorStop(1, F.gruenDunkel);
-  ctx.fillStyle = g;
-  rundRechteck(ctx, -L / 2 + 0.5, -B / 2 + 1.2, L - 3, B - 2.4, 1.2);
-  ctx.fill();
-}
-
-/** @param {CanvasRenderingContext2D} ctx */
-function kessel(ctx) {
-  // Zwei schwarze Druckkessel hinten, längs, mit Kupferbändern.
-  for (const y of [-1.65, 1.65]) {
-    zylinder(ctx, -14, y, 12, 2.9, '#0d0f10', '#4a5157');
-    ctx.fillStyle = F.kupfer;
-    for (let x = -13; x < -2.5; x += 2.2) ctx.fillRect(x, y - 1.45, 0.35, 2.9);
-  }
-  // Langer grüner Hauptkessel vorne.
-  zylinder(ctx, -1.5, 0, 14, 3.6, F.gruenDunkel, F.gruenHell);
-  ctx.fillStyle = F.schwarz;
-  for (const x of [1, 5, 9.5]) ctx.fillRect(x, -1.8, 0.3, 3.6);
-  // Dampfdom
-  kreis(ctx, 6.6, 0, 1.3, F.gruenDunkel);
-  kreis(ctx, 6.4, -0.25, 0.8, F.gruenHell);
-  // Schornstein: Rand, Kupferring, schwarzes Loch.
-  kreis(ctx, 2, 0, 1.6, F.schwarz);
-  kreis(ctx, 2, 0, 1.25, F.kupfer);
-  kreis(ctx, 2, 0, 0.95, '#050505');
-}
-
-/** @param {CanvasRenderingContext2D} ctx */
-function aufbau(ctx) {
-  // Führerhaus hinten
-  ctx.fillStyle = F.gruenDunkel;
-  rundRechteck(ctx, -L / 2 + 0.3, -B / 2 + 1.5, 2.8, B - 3, 0.5);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255, 220, 140, 0.55)';
-  ctx.fillRect(-L / 2 + 2.6, -1.6, 0.4, 3.2);
-  // Kupferrohre an beiden Seiten
-  ctx.strokeStyle = F.kupfer;
-  ctx.lineWidth = 0.28;
-  ctx.lineCap = 'round';
-  for (const s of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(-12, s * 3.3);
-    ctx.lineTo(-2, s * 3.3);
-    ctx.lineTo(-0.5, s * 2.3);
-    ctx.lineTo(11, s * 2.3);
-    ctx.stroke();
-  }
-  // Rote Akzente und Laternen vorne
-  ctx.fillStyle = F.rot;
-  ctx.fillRect(L / 2 - 3.6, -2.4, 0.5, 4.8);
-  kreis(ctx, L / 2 - 2.3, -2.6, 0.35, '#f3d27a');
-  kreis(ctx, L / 2 - 2.3, 2.6, 0.35, '#f3d27a');
-}
-
-// ── Grundformen ───────────────────────────────────────────
-
-/**
- * Liegender Zylinder von oben: Rechteck mit Querverlauf hell in der Mitte.
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} x  hinteres Ende
- * @param {number} y  Mittellinie
- * @param {number} laenge @param {number} durchmesser
- * @param {string} dunkel @param {string} hell
- */
-function zylinder(ctx, x, y, laenge, durchmesser, dunkel, hell) {
-  const g = ctx.createLinearGradient(0, y - durchmesser / 2, 0, y + durchmesser / 2);
-  g.addColorStop(0, dunkel);
-  g.addColorStop(0.35, hell);
-  g.addColorStop(1, dunkel);
-  ctx.fillStyle = g;
-  rundRechteck(ctx, x, y - durchmesser / 2, laenge, durchmesser, durchmesser / 2);
-  ctx.fill();
-}
-
-/**
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} x @param {number} y @param {number} r @param {string} farbe
- */
-function kreis(ctx, x, y, r, farbe) {
-  ctx.fillStyle = farbe;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-}
-
-/**
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} x @param {number} y @param {number} b @param {number} h @param {number} r
- */
-function rundRechteck(ctx, x, y, b, h, r) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, b, h, r);
 }
 
 /**

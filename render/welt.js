@@ -1,178 +1,216 @@
 // @ts-check
 /**
- * welt.js — Zeichnet das Gelände in Kacheln mit drei Detailstufen.
+ * welt.js — Entscheidet, welche Gelände-Kacheln wann berechnet und wie sie gezeichnet werden.
  *
  * ZWECK:    Die Welt ist unbegrenzt. Gezeichnet wird nur, was sichtbar ist, und zwar so fein, wie es
- *           der Zoom verlangt: Jede Kachel ist ein 64 × 64-Bild mit 0,25 m … 64 m pro Bildpunkt.
- *           Ganz nah also 25 cm — keine Treppen an Ufern und Felsen (Spieltest M2). Weich hochskaliert (Schnee hat ohnehin keine harten Kanten),
- *           Fels und Schneehügel mit Hangschattierung (Licht aus Nordwest, passend zum Schatten).
- * LIEST:    Gelände über sim/welt/generator.js (dieselbe Abfrage wie die Kollision), Kamera
+ *           der Zoom verlangt: 9 Stufen von 0,25 m bis 64 m je Kachel-Bildpunkt, jede doppelt so grob
+ *           wie die vorige. Ein Kachel-Bildpunkt wird nie größer als SCHAERFE_PX Bildschirmpunkte —
+ *           so ist die Karte bei 1 km und bei 2 km gleich scharf (Spieltest M2b).
+ * LADEN:    Kein Puzzle mehr: Zuerst wird eine 4× gröbere Grundschicht berechnet (kostet nur 1/16),
+ *           damit nie ein Loch bleibt. Fehlt eine scharfe Kachel, steht dort die beste vorhandene
+ *           (gröbere Elternkachel oder feinere Kinder), und die scharfe blendet weich darüber ein.
+ *           Übrige Rechenzeit füllt einen Vorrat: Rand ringsum (Fahren, Verschieben) und die nächst
+ *           gröbere Stufe (Herauszoomen ist dann sofort scharf).
+ * LIEST:    Kamera, render/weltkachel.js (berechnet ein Kachelbild)
  * SCHREIBT: eigenen Kachel-Speicher (kein Spielzustand)
  * REGEL:    docs/specs/M2-welt.md „Darstellung“
- * DEBUG:    `ek.kacheln()` zeigt Anzahl und Rechenzeit. Fehlen Kacheln lange, BUDGET_MS erhöhen.
+ * DEBUG:    `ek.kacheln()` zeigt Anzahl, Stufe und Rechenzeit. Baut sich zu langsam auf → BUDGET_MS
+ *           erhöhen; zu unscharf → SCHAERFE_PX senken (kostet quadratisch mehr Kacheln).
  */
 
 import { kamera } from './kamera.js';
-import { gelaendeAn } from '../sim/welt/generator.js';
-import { UNTERGRUND, FELS, SCHLUCHT, EIS_DICK, EIS_DUENN } from '../data/untergrund.js';
-import { FEIN_PRO_M } from '../data/welt.js';
+import { kachelErzeugen, messung, PIXEL } from './weltkachel.js';
 
-const PIXEL = 64;                 // Bildpunkte je Kachelkante
+/** Meter je Kachel-Bildpunkt, Stufe 0 … 8 (fein → grob, jeweils Faktor 2). */
+const STUFEN = [0.25, 0.5, 1, 2, 4, 8, 16, 32, 64];
 /**
- * Detailstufen: Meter je Kachel-Bildpunkt und ab welchem Zoom (px/m). Gewechselt wird, sobald ein
- * Kachel-Bildpunkt größer als ~3 Bildschirmpunkte würde (dann sähe man ihn als Klötzchen).
+ * Ein Kachel-Bildpunkt darf höchstens so viele Bildschirmpunkte groß werden.
+ * WARUM 1,6: Bei 1 km wirkte 1,2 scharf, bei 2 km 3,7 verwaschen. Mit Faktor-2-Stufen liegt die
+ * Vergrößerung jetzt immer zwischen 0,8 und 1,6 (nur ganz nah, unter 0,25 m, weiter hochskaliert).
  */
-const STUFEN = [
-  { mProPx: 0.25, abZoom: 8 },
-  { mProPx: 0.5, abZoom: 3.5 },
-  { mProPx: 1, abZoom: 1.6 },
-  { mProPx: 2, abZoom: 0.7 },
-  { mProPx: 4, abZoom: 0.3 },
-  { mProPx: 16, abZoom: 0.07 },
-  { mProPx: 64, abZoom: 0 },
-];
-/** Höchstens so viel Rechenzeit pro Bild für neue Kacheln (ms). */
+const SCHAERFE_PX = 1.6;
+/** Die Grundschicht ist so viele Stufen gröber (2 = 4× gröber, 1/16 der Rechenzeit). */
+const GRUND_ABSTAND = 2;
+/** So lange blendet eine neue scharfe Kachel über die gröbere ein (ms). */
+const EINBLENDEN_MS = 280;
+/** Höchstens so viel Rechenzeit pro Bild für neue Kacheln (ms). Eine Kachel ≈ 2 ms. */
 const BUDGET_MS = 6;
-/** Höchstens so viele Kacheln behalten (je 16 KB). */
-const SPEICHER_MAX = 900;
+/** Höchstens so viele Kacheln behalten (je 16 KB → ~40 MB); verworfen wird die am längsten unbenutzte.
+ * WARUM so viele: Ganz weit draußen auf einem großen Bildschirm sind samt Vorrat ~1300 sichtbar. */
+const SPEICHER_MAX = 2500;
 
-/** @type {Map<string, HTMLCanvasElement>} */
+/** @typedef {{bild: HTMLCanvasElement, seit: number}} Kachel  seit = Erzeugungszeit (ms, performance) */
+/** @type {Map<string, Kachel>} */
 const kacheln = new Map();
-const messung = { erzeugt: 0, msLetzte: 0 };
+let letzteStufe = 0;
+
+/** @typedef {{tx0: number, ty0: number, tx1: number, ty1: number}} Bereich  Kachelnummern, inklusive */
+
+// ── Zeichnen ──────────────────────────────────────────────
 
 /**
- * Zeichnet alle sichtbaren Kacheln.
+ * Berechnet fehlende Kacheln im Zeitbudget und zeichnet alle sichtbaren.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} seed
  */
 export function weltZeichnen(ctx, seed) {
-  const stufeNr = STUFEN.findIndex((s) => kamera.zoom >= s.abZoom);
-  const stufe = STUFEN[stufeNr];
-  const kachelM = PIXEL * stufe.mProPx;
-  const kachelPx = kachelM * kamera.zoom;
-  const links = kamera.x - kamera.breite / 2 / kamera.zoom, oben = kamera.y - kamera.hoehe / 2 / kamera.zoom;
-  const tx0 = Math.floor(links / kachelM), ty0 = Math.floor(oben / kachelM);
-  const tx1 = Math.floor((links + kamera.breite / kamera.zoom) / kachelM);
-  const ty1 = Math.floor((oben + kamera.hoehe / kamera.zoom) / kachelM);
-  const start = performance.now();
+  const k = stufeFuerZoom(kamera.zoom);
+  letzteStufe = k;
+  const jetzt = performance.now();
+  const ende = jetzt + BUDGET_MS;
+  const grob = STUFEN.length - 1;
+  // Reihenfolge = Wichtigkeit: Grundschicht (nie Löcher) → scharfe Sicht → Vorrat.
+  erzeugenBis(seed, Math.min(grob, k + GRUND_ABSTAND), 0, ende);
+  erzeugenBis(seed, k, 0, ende);
+  erzeugenBis(seed, k, 1, ende);
+  if (k < grob) erzeugenBis(seed, k + 1, 1, ende);
+
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  // Von der Mitte nach außen erzeugen, damit das Wichtigste zuerst erscheint.
-  const reihenfolge = [];
-  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) reihenfolge.push([tx, ty]);
-  const mx = (tx0 + tx1) / 2, my = (ty0 + ty1) / 2;
-  reihenfolge.sort((a, b) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(b[0] - mx, b[1] - my));
-  for (const [tx, ty] of reihenfolge) {
-    const schluessel = `${seed},${stufeNr},${tx},${ty}`;
-    let bild = kacheln.get(schluessel);
-    if (!bild) {
-      if (performance.now() - start > BUDGET_MS) continue; // nächstes Bild weiter
-      bild = kachelErzeugen(seed, stufe, tx, ty);
-      merken(schluessel, bild);
-    }
-    const bx = (tx * kachelM - kamera.x) * kamera.zoom + kamera.breite / 2;
-    const by = (ty * kachelM - kamera.y) * kamera.zoom + kamera.hoehe / 2;
-    // +0,5 px Überlappung gegen feine Nähte zwischen den Kacheln.
-    ctx.drawImage(bild, bx, by, kachelPx + 0.5, kachelPx + 0.5);
+  const b = bereich(k, 0);
+  for (let ty = b.ty0; ty <= b.ty1; ty++) {
+    for (let tx = b.tx0; tx <= b.tx1; tx++) kachelZeichnen(ctx, seed, k, tx, ty, jetzt);
   }
 }
 
 /**
- * @param {string} schluessel @param {HTMLCanvasElement} bild
+ * Zeichnet eine Kachel; solange sie fehlt oder noch einblendet, liegt Ersatz darunter.
+ * @param {CanvasRenderingContext2D} ctx @param {number} seed
+ * @param {number} k  Stufe @param {number} tx @param {number} ty @param {number} jetzt
  */
-function merken(schluessel, bild) {
+function kachelZeichnen(ctx, seed, k, tx, ty, jetzt) {
+  const eintrag = holen(seed, k, tx, ty);
+  const deckung = eintrag ? Math.min(1, (jetzt - eintrag.seit) / EINBLENDEN_MS) : 0;
+  if (deckung < 1) ersatzZeichnen(ctx, seed, k, tx, ty);
+  if (!eintrag) return;
+  const [bx, by, groesse] = zielRechteck(k, tx, ty);
+  ctx.globalAlpha = deckung;
+  // +0,5 px Überlappung gegen feine Nähte zwischen den Kacheln.
+  ctx.drawImage(eintrag.bild, bx, by, groesse + 0.5, groesse + 0.5);
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Bester Ersatz für eine fehlende Kachel: der passende Ausschnitt der nächsten vorhandenen
+ * gröberen Kachel, darüber die schon vorhandenen feineren Kinder (nach dem Herauszoomen).
+ * @param {CanvasRenderingContext2D} ctx @param {number} seed
+ * @param {number} k @param {number} tx @param {number} ty
+ */
+function ersatzZeichnen(ctx, seed, k, tx, ty) {
+  const [bx, by, groesse] = zielRechteck(k, tx, ty);
+  for (let e = k + 1; e < STUFEN.length; e++) {
+    const f = 2 ** (e - k);
+    const px = Math.floor(tx / f), py = Math.floor(ty / f);
+    const eltern = holen(seed, e, px, py);
+    if (!eltern) continue;
+    const teil = PIXEL / f;
+    ctx.drawImage(eltern.bild, (tx - px * f) * teil, (ty - py * f) * teil, teil, teil, bx, by, groesse + 0.5, groesse + 0.5);
+    break;
+  }
+  if (k === 0) return;
+  const halb = groesse / 2;
+  for (let dy = 0; dy < 2; dy++) {
+    for (let dx = 0; dx < 2; dx++) {
+      const kind = holen(seed, k - 1, tx * 2 + dx, ty * 2 + dy);
+      if (kind) ctx.drawImage(kind.bild, bx + dx * halb, by + dy * halb, halb + 0.5, halb + 0.5);
+    }
+  }
+}
+
+// ── Berechnen ─────────────────────────────────────────────
+
+/**
+ * Berechnet fehlende Kacheln einer Stufe von der Bildmitte nach außen, bis die Zeit um ist.
+ * @param {number} seed @param {number} k  Stufe
+ * @param {number} rand  zusätzliche Kachelreihen ringsum (Vorrat)
+ * @param {number} ende  performance-Zeit, bis zu der gerechnet werden darf
+ */
+function erzeugenBis(seed, k, rand, ende) {
+  if (performance.now() >= ende) return;
+  const b = bereich(k, rand);
+  /** @type {[number, number][]} */
+  const fehlend = [];
+  for (let ty = b.ty0; ty <= b.ty1; ty++) {
+    for (let tx = b.tx0; tx <= b.tx1; tx++) if (!kacheln.has(schluessel(seed, k, tx, ty))) fehlend.push([tx, ty]);
+  }
+  const mx = (b.tx0 + b.tx1) / 2, my = (b.ty0 + b.ty1) / 2;
+  fehlend.sort((a, c) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(c[0] - mx, c[1] - my));
+  for (const [tx, ty] of fehlend) {
+    if (performance.now() >= ende) return;
+    merken(schluessel(seed, k, tx, ty), { bild: kachelErzeugen(seed, STUFEN[k], tx, ty), seit: performance.now() });
+  }
+}
+
+// ── Hilfen ────────────────────────────────────────────────
+
+/**
+ * Gröbste Stufe, deren Bildpunkt höchstens SCHAERFE_PX Bildschirmpunkte groß wird.
+ * @param {number} zoom  Bildpunkte pro Meter @returns {number}
+ */
+function stufeFuerZoom(zoom) {
+  for (let k = STUFEN.length - 1; k >= 0; k--) if (STUFEN[k] * zoom <= SCHAERFE_PX) return k;
+  return 0;
+}
+
+/**
+ * Sichtbare Kacheln einer Stufe, auf Wunsch mit Rand.
+ * @param {number} k @param {number} rand @returns {Bereich}
+ */
+function bereich(k, rand) {
+  const kachelM = PIXEL * STUFEN[k];
+  const links = kamera.x - kamera.breite / 2 / kamera.zoom, oben = kamera.y - kamera.hoehe / 2 / kamera.zoom;
+  return {
+    tx0: Math.floor(links / kachelM) - rand,
+    ty0: Math.floor(oben / kachelM) - rand,
+    tx1: Math.floor((links + kamera.breite / kamera.zoom) / kachelM) + rand,
+    ty1: Math.floor((oben + kamera.hoehe / kamera.zoom) / kachelM) + rand,
+  };
+}
+
+/**
+ * Lage und Größe einer Kachel auf dem Bildschirm (CSS-Pixel).
+ * @param {number} k @param {number} tx @param {number} ty @returns {[number, number, number]}
+ */
+function zielRechteck(k, tx, ty) {
+  const kachelM = PIXEL * STUFEN[k];
+  return [
+    (tx * kachelM - kamera.x) * kamera.zoom + kamera.breite / 2,
+    (ty * kachelM - kamera.y) * kamera.zoom + kamera.hoehe / 2,
+    kachelM * kamera.zoom,
+  ];
+}
+
+/** @param {number} seed @param {number} k @param {number} tx @param {number} ty */
+function schluessel(seed, k, tx, ty) { return `${seed},${k},${tx},${ty}`; }
+
+/**
+ * Holt eine Kachel und markiert sie als frisch benutzt.
+ * WARUM: Die Map behält die Einfügereihenfolge — wer benutzt wird, wandert ans Ende und wird
+ * zuletzt verworfen (die Grundschicht bleibt so immer erhalten).
+ * @param {number} seed @param {number} k @param {number} tx @param {number} ty
+ * @returns {Kachel | undefined}
+ */
+function holen(seed, k, tx, ty) {
+  const s = schluessel(seed, k, tx, ty);
+  const e = kacheln.get(s);
+  if (e) { kacheln.delete(s); kacheln.set(s, e); }
+  return e;
+}
+
+/** @param {string} s @param {Kachel} kachel */
+function merken(s, kachel) {
   if (kacheln.size >= SPEICHER_MAX) {
-    // Älteste Hälfte verwerfen (Map behält die Einfügereihenfolge).
-    let n = SPEICHER_MAX / 2;
-    for (const k of kacheln.keys()) { kacheln.delete(k); if (--n <= 0) break; }
+    // Das am längsten unbenutzte Viertel verwerfen.
+    let n = SPEICHER_MAX / 4;
+    for (const alt of kacheln.keys()) { kacheln.delete(alt); if (--n <= 0) break; }
   }
-  kacheln.set(schluessel, bild);
+  kacheln.set(s, kachel);
 }
 
-/**
- * Berechnet ein Kachelbild aus dem Generator (Feinpunkte zu 25 cm, siehe data/welt.js).
- * @param {number} seed
- * @param {{mProPx: number}} stufe
- * @param {number} tx @param {number} ty
- * @returns {HTMLCanvasElement}
- */
-function kachelErzeugen(seed, stufe, tx, ty) {
-  const t0 = performance.now();
-  // Ein Rand von je einem Bildpunkt rundum: für Hangschattierung und Kantenglättung.
-  const n = PIXEL + 2;
-  const werte = new Int32Array(n * n);
-  const schritt = stufe.mProPx * FEIN_PRO_M; // Feinpunkte je Bildpunkt
-  const fx0 = (tx * PIXEL - 1) * schritt, fy0 = (ty * PIXEL - 1) * schritt;
-  for (let y = 0; y < n; y++) {
-    for (let x = 0; x < n; x++) werte[y * n + x] = gelaendeAn(seed, fx0 + x * schritt, fy0 + y * schritt);
-  }
-  // 1. Farben aller Punkte (inkl. Rand).
-  const farben = new Float32Array(n * n * 3);
-  for (let y = 0; y < n - 1; y++) {
-    for (let x = 0; x < n - 1; x++) {
-      const w = werte[y * n + x];
-      const hoehe = w & 0xffff, tiefer = werte[(y + 1) * n + x + 1] & 0xffff;
-      // Hang auf 4 m umgerechnet, damit die Schattierung in jeder Stufe gleich stark wirkt.
-      farbeSetzen(farben, (y * n + x) * 3, Math.floor(w / 65536), hoehe, ((hoehe - tiefer) * 4) / stufe.mProPx);
-    }
-  }
-  // 2. Kantenglättung: Wo ein Nachbar anderes Gelände hat, wird über 3 × 3 gemittelt. Dadurch
-  //    haben schräge Ufer und Schluchtränder keine Sägezähne mehr (Spieltest M2).
-  const c = document.createElement('canvas');
-  c.width = PIXEL; c.height = PIXEL;
-  const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
-  const bild = g.createImageData(PIXEL, PIXEL);
-  const d = bild.data;
-  for (let y = 1; y <= PIXEL; y++) {
-    for (let x = 1; x <= PIXEL; x++) {
-      const i = y * n + x, typ = Math.floor(werte[i] / 65536);
-      const rand = Math.floor(werte[i - 1] / 65536) !== typ || Math.floor(werte[i + 1] / 65536) !== typ
-        || Math.floor(werte[i - n] / 65536) !== typ || Math.floor(werte[i + n] / 65536) !== typ;
-      const o = ((y - 1) * PIXEL + (x - 1)) * 4;
-      for (let k = 0; k < 3; k++) {
-        if (!rand) { d[o + k] = farben[i * 3 + k]; continue; }
-        let summe = 0;
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dx = -1; dx <= 1; dx++) summe += farben[(i + dy * n + dx) * 3 + k] * (dx === 0 && dy === 0 ? 2 : 1);
-        }
-        d[o + k] = summe / 10;
-      }
-      d[o + 3] = 255;
-    }
-  }
-  g.putImageData(bild, 0, 0);
-  messung.erzeugt += 1;
-  messung.msLetzte = performance.now() - t0;
-  return c;
-}
-
-/**
- * Farbe eines Bildpunkts: Grundfarbe des Untergrunds, Hangschattierung, etwas Körnung.
- * @param {Float32Array} d  Farbliste (r, g, b je Punkt) @param {number} i  Index des Rot-Werts
- * @param {number} typ @param {number} hoehe
- * @param {number} hang  Höhenunterschied auf 4 m nach Südosten (+ = Hang zur Sonne hin, hell)
- */
-function farbeSetzen(d, i, typ, hoehe, hang) {
-  const [r, gr, b] = UNTERGRUND[typ].farbe;
-  // Fels: kräftige Schattierung und dunkler mit der Höhe; Schnee: nur ein Hauch.
-  // Schnee nur ganz leicht (sonst wirken Hügel wie graue Schmutzwolken).
-  const fels = typ === FELS;
-  const staerke = fels ? 0.003 : typ === SCHLUCHT ? 0 : 0.00015;
-  const grenze = fels ? 0.35 : 0.05;
-  let licht = 1 + Math.max(-grenze, Math.min(grenze, hang * staerke));
-  if (typ === FELS) licht *= 1.1 - (hoehe - 40000) / 90000;
-  // Schlieren im Eis: langsam wechselnde Helligkeit entlang der Höhenlinien.
-  if (typ === EIS_DICK || typ === EIS_DUENN) licht *= 1 + (((hoehe >> 9) & 7) - 4) / 300;
-  // Körnung echt zufällig (nicht aus der Höhe — das ergab Ringmuster wie Holzmaserung).
-  const koernung = Math.random() * 8 - 4;
-  d[i] = r * licht + koernung;
-  d[i + 1] = gr * licht + koernung;
-  d[i + 2] = b * licht + koernung;
-}
-
-/** @returns {{kacheln: number, erzeugt: number, msLetzte: number}} */
+/** @returns {{kacheln: number, stufeM: number, erzeugt: number, msLetzte: number}} */
 export function kachelZahlen() {
-  return { kacheln: kacheln.size, erzeugt: messung.erzeugt, msLetzte: Number(messung.msLetzte.toFixed(2)) };
+  return { kacheln: kacheln.size, stufeM: STUFEN[letzteStufe], erzeugt: messung.erzeugt,
+    msLetzte: Number(messung.msLetzte.toFixed(2)) };
 }
 
 /** Alle Kacheln verwerfen (neue Welt). */

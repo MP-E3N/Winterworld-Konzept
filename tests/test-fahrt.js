@@ -28,12 +28,13 @@ export function testProtokoll() {
   bei(400, steuern(100, 0));
   bei(800, steuern(100, 100));  // scharf rechts — inzwischen auf dem Eis: rutschen
   bei(880, steuern(100, 0));
-  bei(900, { art: 'TEMPOMAT', spieler: 0, an: true }); // Tempo halten, Gas loslassen
+  bei(900, { art: 'TELEGRAF', spieler: 0, stufe: 7 }); // Telegraf „Voll voraus“, Handgas los
   bei(901, steuern(0, 0));
   bei(1000, { art: 'DRUCK', spieler: 0, stufe: 1 });
-  bei(1100, steuern(-100, 0));  // bremsen, dann rückwärts
-  bei(1400, steuern(-100, -100)); // rückwärts mit Lenkung
-  bei(1550, steuern(0, 0));     // ausrollen
+  bei(1100, { art: 'TELEGRAF', spieler: 0, stufe: 1 }); // „Halb zurück“: bremsen, dann rückwärts
+  bei(1400, steuern(0, -100));  // rückwärts mit Lenkung
+  bei(1550, { art: 'TELEGRAF', spieler: 0, stufe: 3 }); // „Stopp“
+  bei(1551, steuern(0, 0));
   // Seed 0 = Testgelände: Der See liegt garantiert geradeaus im Norden.
   return { seed: 0, ticks: 1800, protokoll };
 }

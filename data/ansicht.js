@@ -4,7 +4,7 @@
  * REGEL: KONZEPT.md §6
  */
 
-/** Zoom in Bildpunkten pro Meter. 40 = Koloss (32 m) füllt einen großen Bildschirm. */
+/** Zoom in Bildpunkten pro Meter. 40 = Koloss (40 m) füllt einen großen Bildschirm. */
 export const ZOOM_MAX = 40;
 /** 0,05 = 16 km passen auf 800 Bildpunkte. */
 export const ZOOM_MIN = 0.05;
@@ -30,17 +30,32 @@ export const FARBEN_KOLOSS = {
   schatten: 'rgba(40, 55, 70, 0.28)',
 };
 
-/** Raddurchmesser (m) — für Raddrehung, Dampftakt und die Dampfmaschine im HUD. */
+/** Durchmesser der Lenkräder (m). */
 export const RAD_DURCHMESSER_M = 2.8;
 
-/** Breite der normalen Räder (m). */
+/** Durchmesser der zwei großen Traktions-(Antriebs-)räder (m) — bestimmt auch Dampftakt und die
+ * Dampfmaschine im HUD (die Kolben treiben diese Räder). Spieltest M2b: 2 große statt 3 kleine. */
+export const TRAKTION_DURCHMESSER_M = 3.8;
+
+/** Grundbreite der Räder (m); die Traktionsräder sind TRAKTION_UEBERSTAND_M breiter. */
 export const RAD_BREITE_M = 0.9;
 
-/** So weit ragen die drei mittleren Traktionsräder seitlich über den Rumpf hinaus (m). */
-export const TRAKTION_UEBERSTAND_M = 1.1;
+/** Breite der Lenkräder (m). Spieltest M2b: nach innen viel breiter (vorher 0,9), Außenkante bleibt. */
+export const LENKRAD_BREITE_M = 1.7;
 
-/** Größter Radeinschlag der vorderen/hinteren Radsätze bei vollem Lenken (Bogenmaß, ≈ 14°). */
-export const RAD_EINSCHLAG_MAX = 0.25;
+/** So viel breiter als RAD_BREITE_M sind die Traktionsräder; sie ragen entsprechend nach außen (m). */
+export const TRAKTION_UEBERSTAND_M = 1.7;
+
+/**
+ * So viel ist der Mittelteil über den drei Traktionsrädern je Seite breiter als der übrige Rumpf (m).
+ * Die Traktionsräder rücken um denselben Wert nach außen (Spieltest M2b). Nur Optik — die
+ * Kollision rechnet weiter mit KOLOSS_BREITE_M.
+ */
+export const MITTE_BREITER_M = 0.9;
+
+/** Größter Radeinschlag des vordersten Radsatzes bei vollem Lenken (Bogenmaß, ≈ 11,5°).
+ * Spieltest M2b: 0,35 → 0,2 (passt zum größeren Wendekreis). */
+export const RAD_EINSCHLAG_MAX = 0.2;
 
 /**
  * Schattenwurf bei fester Sonne (Sonne im Nordwesten): Versatz in WELTmetern pro Meter Höhe.
@@ -48,6 +63,14 @@ export const RAD_EINSCHLAG_MAX = 0.25;
  * muss also immer nach Südosten fallen.
  */
 export const SCHATTEN_PRO_HOEHE = { x: 0.42, y: 0.58 };
+
+/** Scheinwerfer: Reichweite (m) und halber Öffnungswinkel (Grad) je Lichtkegel. */
+export const LICHT_REICHWEITE_M = 85;
+export const LICHT_KEGEL_GRAD = 17;
+/** Deckkraft des Lichtkegels bei hellem Tag (nur ein goldener Schimmer auf dem Schnee). */
+export const LICHT_TAG_DECKKRAFT = 0.3;
+/** Farbe der Nacht (r, g, b) — kaltes Dunkelblau. */
+export const NACHT_FARBE = '6, 10, 22';
 
 /** Rasterlinien: Abstände in Metern (fein → grob). */
 export const RASTER_M = [10, 100, 1000, 10000];

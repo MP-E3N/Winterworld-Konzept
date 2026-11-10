@@ -16,7 +16,7 @@ import { bildZeichnen } from './render/zeichnen.js';
 import { optikZuruecksetzen } from './render/spuren.js';
 import { schneetreibenZuruecksetzen } from './render/wind.js';
 import { weltZuruecksetzen } from './render/welt.js';
-import { tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, tempoHaltenUmschalten, zieltempoSetzen } from './eingabe/tastatur.js';
+import { tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, telegrafSetzen, lichtUmschalten } from './eingabe/tastatur.js';
 import { anzeigeAufbauen, anzeigeAktualisieren } from './ui/anzeige.js';
 import { overlayEinrichten, overlayAktualisieren } from './debug/overlay.js';
 import { konsoleEinrichten } from './debug/konsole.js';
@@ -68,10 +68,7 @@ groesseAnpassen();
 window.addEventListener('resize', groesseAnpassen);
 kameraEinrichten(canvas);
 tastaturEinrichten(() => spiel, hilfeUmschalten);
-anzeigeAufbauen(hud, {
-  tempoHalten: () => tempoHaltenUmschalten(spiel),
-  zieltempo: (kmh) => zieltempoSetzen(spiel, kmh),
-});
+anzeigeAufbauen(hud, { telegraf: (stufe) => telegrafSetzen(spiel, stufe), licht: () => lichtUmschalten(spiel) });
 overlayEinrichten(debugEl);
 konsoleEinrichten(() => spiel, neueWelt);
 hilfeKnopf.addEventListener('click', () => hilfeUmschalten());

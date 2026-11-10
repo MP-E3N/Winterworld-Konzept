@@ -47,6 +47,44 @@ Schlucht Spielregeln sind (Kollision) und auf allen Rechnern gleich sein müssen
 Zustand (KONZEPT.md §8 Regel 7). Seed 0 bleibt das feste Testgelände für Tests und Fahrgefühl.
 Darstellung in eigenen Kacheln (3 Detailstufen) mit Zeitbudget pro Bild.
 
+## E-010 Maschinentelegraf statt Gas und „Tempo halten“ (2026-11-10, Spieltest M2b, Nutzerwunsch)
+W/S geben kein Gas mehr, sondern stellen einen Maschinentelegrafen wie auf alten Dampfschiffen
+eine Stellung weiter (9 Stellungen von „Voll zurück“ bis „Äußerste Kraft voraus“, `TELEGRAF` in
+data/koloss.js). Die Maschine regelt das Tempo selbst (Vorsteuerung + Korrektur, bremst beim
+Herunterschalten sanft). Befehl `TELEGRAF {stufe}`, Zustand v4 (`telegraf` statt `tempomat`).
+Der Befehl `TEMPOMAT` ist entfallen. `STEUERN.gas` bleibt als Handgas (Tests, später Gamepad) und
+übersteuert den Telegrafen, solange es ≠ 0 ist. Die Vorwärts-Tempi Langsam/Halb/Voll/Äußerste
+entsprechen den Kesselstufen 1–4 auf Packschnee; schafft der Kessel die Stellung nicht, zittert die
+Manometer-Nadel (`kesselUeberlastet()`). Replay deshalb neu aufgenommen.
+
+## E-011 Drehpunkt an den Traktionsrädern; Scheinwerfer im Spielzustand (2026-11-10, Spieltest M2b)
+Die Position eines Kolosses im Zustand ist der Drehpunkt in der Mitte der drei ungelenkten
+Traktionsräder, nicht die Rumpfmitte (`RUMPF_VOR_DREHPUNKT_M` = 4,8 m). Ein allradgelenktes
+Fahrzeug dreht sich um seine starre Achse; seit der Verlängerung nach vorn sah die Drehung um die
+Rumpfmitte falsch aus. Die Fahrphysik bleibt unverändert (sie rechnete schon „am Bezugspunkt“),
+nur Kollision und Darstellung rechnen den Versatz ein.
+Scheinwerfer (`licht` 0/1, Befehl `LICHT`) gehören in den Zustand, nicht nur in die Darstellung:
+Später hängen Sicht (Nacht, Sturm) und das, was Mitspieler sehen, davon ab. Wie dunkel es ist, ist
+bis M4 nur Darstellung (`ek.nacht()`); ab M4 kommt die Tageszeit in den Zustand. Zustand v5.
+
+## E-012 Lenken über einen Kurvenradius statt fester Drehrate (2026-11-10, Spieltest M2b)
+Bisher drehte der Koloss ab 8 km/h immer mit 10°/s — egal wie schnell; darunter anteilig. Das sah
+aus, als drehe er sich um einen Punkt. Jetzt gilt: Drehung je Tick = gefahrener Weg / Kurvenradius
+(`WENDE_RADIUS` 20 m, seit Teil 5 32 m, bei vollem Einschlag, Winkel über `WINKEL_JE_RAD`, nur Ganzzahlen). Ein Rad-
+fahrzeug dreht sich nur, während es rollt. `DREH_MAX` bleibt als Obergrenze für schnelle Fahrt
+(400 Tonnen, dann wird der Bogen weiter). Replay deshalb neu aufgenommen.
+
+## E-013 Dreck und Radabdrücke als vorgerenderte Sprites (2026-11-10, Spieltest M2b, Nutzerwunsch)
+Statt jeden Rußfleck und jedes Schlackekorn als einzelnen Kreis zu malen, erzeugt
+`render/sprites.js` beim ersten Gebrauch je Sorte 16–32 unterschiedliche Bildchen. Ein Fleck ist
+ein Bild (zufällig gewählt, gedreht, skaliert) — so wiederholt sich kein Muster, und es sind weit
+weniger Zeichenbefehle. Flecken bleiben einzelne Objekte mit eigenem Alter (verblassen einzeln).
+Leistung: Je Sorte liegen alle Varianten auf EINEM Atlas-Bild. Seit Teil 8 (Nutzer: 16 Bilder/s
+in dichten Rußfeldern) werden Flecken und Radabdrücke beim Ablegen einmal in Welt-Kacheln
+(32 m, 8 px/m) eingebrannt; pro Bild werden nur die sichtbaren Kacheln gezeichnet. Kacheln
+verblassen gemeinsam (alle 20 s ein Stück) statt jeder Fleck einzeln — Preis: Aus großer Nähe sind
+die Flecken leicht weicher (8 px/m). Rauch wird in halber Auflösung gemalt.
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige

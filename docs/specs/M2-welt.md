@@ -30,9 +30,16 @@ Prüfpunkte rund um den Rumpf (alle 4 m an beiden Seiten, Bug, Heck). Nach dem B
 entlangrutschen); 4. sonst stehen bleiben, Tempo 0. Schaden kommt in M4.
 
 ## Darstellung (`render/welt.js`)
-Kacheln mit 64 × 64 Bildpunkten in drei Detailstufen: 1 Zelle/Bildpunkt (ab 0,5 px/m),
-4 Zellen (ab 0,12 px/m), 16 Zellen (darunter). Weich hochskaliert, Fels mit Hangschattierung.
-Berechnung mit Zeitbudget pro Bild, fehlende Kacheln erscheinen nach und nach.
+**Stand Spieltest M2b:** Kacheln mit 64 × 64 Bildpunkten in 9 Stufen (0,25 · 0,5 · 1 · 2 · 4 · 8 ·
+16 · 32 · 64 m je Bildpunkt, jeweils Faktor 2). Gewählt wird die gröbste Stufe, deren Bildpunkt
+höchstens 1,6 Bildschirmpunkte groß wird — damit ist jede Zoomstufe gleich scharf (vorher sprang
+es 4 → 16 → 64 m: bei 1 km scharf, bei 2 km verwaschen).
+Laden in fester Reihenfolge, 6 ms Budget pro Bild: (1) Grundschicht 2 Stufen gröber (1/16 der
+Arbeit, nie Löcher) → (2) Zielstufe von der Mitte nach außen → (3) Vorrat: eine Kachelreihe Rand
+und die nächst gröbere Stufe. Fehlende Kacheln zeigen den Ausschnitt der nächsten vorhandenen
+gröberen Kachel (darüber vorhandene feinere), neue Kacheln blenden in 280 ms ein — kein Puzzle.
+Speicher: bis 2500 Kacheln, verworfen wird die am längsten unbenutzte.
+Dateien: `render/welt.js` (welche Kachel wann), `render/weltkachel.js` (ein Kachelbild).
 
 ## Tests
 - Rauschen: gleich bei gleichem Seed, Werte im Bereich, verschiedene Seeds verschieden.
