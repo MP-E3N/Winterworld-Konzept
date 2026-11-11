@@ -14,6 +14,7 @@
  */
 
 import { befahrbarAn } from '../welt/untergrund.js';
+import { gebaeudeAn } from '../siedlung.js';
 import { cosW, sinW, teile, TRIG_EINS } from '../lib/winkel.js';
 import { KOLOSS_LAENGE_M, KOLOSS_BREITE_M, UM_PRO_METER, RUMPF_VOR_DREHPUNKT_M } from '../../data/koloss.js';
 
@@ -51,7 +52,7 @@ export function lageFrei(seed, x, y, h) {
   for (const [lx, ly] of PRUEFPUNKTE) {
     const wx = x + teile(lx * c - ly * s, TRIG_EINS);
     const wy = y + teile(lx * s + ly * c, TRIG_EINS);
-    if (!befahrbarAn(seed, wx, wy)) return false;
+    if (!befahrbarAn(seed, wx, wy) || gebaeudeAn(wx, wy)) return false;
   }
   return true;
 }

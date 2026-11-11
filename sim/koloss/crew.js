@@ -20,6 +20,8 @@ import {
 } from '../../data/crew.js';
 import { WARENLAGER } from '../../data/fundstellen.js';
 import { lagerMenge, einlagern } from './lager.js';
+import { siedlungImStand } from '../siedlung.js';
+import { SIEDLUNG_SATT, SIEDLUNG_ERHOLUNG, SIEDLUNG_WAERME } from '../../data/siedlungen.js';
 import { teile } from '../lib/winkel.js';
 
 /** @typedef {import('../types.js').Koloss} Koloss */
@@ -35,13 +37,28 @@ import { teile } from '../lib/winkel.js';
 export function crewSchritt(k, state) {
   const c = k.crew;
   const leute = c.heizer + c.arbeiter;
-  if (leute > 0) {
+  if (leute > 0 && siedlungImStand(k) >= 0) {
+    inDerSiedlung(c);
+  } else if (leute > 0) {
     essen(k, c, leute);
     c.gesundheit = klemmen(c.gesundheit + gesundheitAenderung(c, k.waerme));
     sterben(c);
     moral(c, k.waerme);
   }
   state.trupps[k.trupp].leute = gesundeArbeiter(c);
+}
+
+/**
+ * In der Siedlung (im Stand, M4d): Die Crew sitzt warm in den Hütten und isst dort — die Vorräte an
+ * Bord bleiben unberührt. Sie wird satt, erholt sich schnell, niemand stirbt (Nutzerentscheidung).
+ * @param {Crew} c
+ */
+function inDerSiedlung(c) {
+  c.essenMg = 0;
+  c.sterben = 0;
+  c.satt = klemmen(c.satt + SIEDLUNG_SATT);
+  c.gesundheit = klemmen(c.gesundheit + SIEDLUNG_ERHOLUNG);
+  moral(c, SIEDLUNG_WAERME);
 }
 
 // ── Essen ──

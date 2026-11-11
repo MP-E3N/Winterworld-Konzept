@@ -1,7 +1,8 @@
 // @ts-check
 /**
  * anzeige.js — Anzeigen am Bildrand: Tempo, Dampfmaschine, Kesseldruck, Maschinentelegraf, Wind,
- *              Boden, Laderaum (M3), Crew (M4b), Meldung beim Liegenbleiben (M4c), Trupp, Brennstoff-Wahlschalter, Kälte, Uhr (M4a), Maßstab.
+ *              Boden, Laderaum (M3), Crew (M4b), Meldung beim Liegenbleiben (M4c), Trupp, Brennstoff-Wahlschalter, Kälte, Uhr (M4a),
+ *              Heimat + Speicher-Meldung (M4d), Maßstab.
  *
  * ZWECK:    Das Nötigste zum Fahren, schlicht (Nutzerwunsch aus Kronwege: keine Extra-Fenster,
  *           Bedienhinweise nur hinter „?“).
@@ -29,6 +30,11 @@ import { windVektor, windRelativ } from '../render/wind.js';
 import { dampfmaschineEinrichten, dampfmaschineZeichnen } from './dampfmaschine.js';
 import { telegrafEinrichten, telegrafZeichnen } from './telegraf.js';
 import { lampeEinrichten, lampeZeichnen } from './lampe.js';
+import { speicherMeldung } from '../game/speichern.js';
+import { siedlungVon } from '../sim/siedlung.js';
+import { rumpfMitte } from '../sim/abfragen.js';
+import { SIEDLUNGEN } from '../data/siedlungen.js';
+import { UM_PRO_METER } from '../data/koloss.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -77,10 +83,12 @@ export function anzeigeAufbauen(hud, aktionen) {
         <span class="mini" title="Moral — wird noch nur angezeigt"><small>Moral</small><span class="minibalken"><span id="a-moral" class="moral"></span></span></span></div>
       <div class="zeile"><span class="beschr">Trupp</span><span id="a-trupp"></span></div>
     </div>
-    <div class="tafel rechts-unten"><div id="a-uhr" class="uhr"></div><div id="a-mass" class="mass"></div><div id="a-masstext"></div></div>
+    <div class="tafel rechts-unten"><div id="a-uhr" class="uhr"></div>
+      <div class="heimat" title="Heimat: hier speicherst du, lagerst ein und startest nach einem Wrack neu. Pfeil = Richtung (Norden oben)."><span id="a-heimatpfeil" class="windpfeil">➜</span><span id="a-heimat"></span></div><div id="a-mass" class="mass"></div><div id="a-masstext"></div></div>
     <div id="a-status" class="status"></div>`;
   const ids = ['a-tempo', 'a-druck', 'a-befehl', 'a-licht', 'a-windpfeil', 'a-wind', 'a-boden', 'a-mass', 'a-masstext', 'a-status',
-    'a-fuell-0', 'a-fuell-1', 'a-lager-0', 'a-lager-1', 'a-trupp', 'a-crew', 'a-satt', 'a-gesund', 'a-moral', 'a-kaelte', 'a-uhr', 'a-heizung'];
+    'a-fuell-0', 'a-fuell-1', 'a-lager-0', 'a-lager-1', 'a-trupp', 'a-crew', 'a-satt', 'a-gesund', 'a-moral', 'a-kaelte', 'a-uhr', 'a-heizung',
+    'a-heimat', 'a-heimatpfeil'];
   for (const id of ids) {
     el[id] = /** @type {HTMLElement} */ (hud.querySelector('#' + id));
   }
@@ -130,10 +138,11 @@ export function anzeigeAktualisieren(spiel, dtMs) {
     });
     laderaum(s, k);
     kesselUndKaelte(s, k);
+    heimat(k);
   }
   uhr(s.tick);
   massstab();
-  const status = v.pausiert() ? 'PAUSE' : liegenMeldung(s, v.spieler, dtMs) || (v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '');
+  const status = v.pausiert() ? 'PAUSE' : liegenMeldung(s, v.spieler, dtMs) || speicherMeldung() || (v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '');
   el['a-status'].textContent = status;
   el['a-status'].hidden = status === '';
 }
@@ -199,7 +208,22 @@ function liegenMeldung(s, spieler, dtMs) {
   }
   liegen.wracks = s.wracks.length;
   liegen.restMs = Math.max(0, liegen.restMs - dtMs);
-  return liegen.restMs > 0 ? 'LIEGENGEBLIEBEN — das Wrack bleibt, Neustart am Startpunkt' : '';
+  return liegen.restMs > 0 ? 'LIEGENGEBLIEBEN — das Wrack bleibt, Neustart in der Heimat' : '';
+}
+
+/**
+ * Zeile „Heimat“ unten rechts (M4d): Name, Richtungspfeil und Entfernung — zum Heimfinden.
+ * @param {import('../sim/types.js').Koloss} k
+ */
+function heimat(k) {
+  const sd = SIEDLUNGEN[k.heimat];
+  if (!sd) return;
+  const m = rumpfMitte(k);
+  const dx = sd.x - m.x / UM_PRO_METER, dy = sd.y - m.y / UM_PRO_METER, weit = Math.hypot(dx, dy);
+  const da = siedlungVon(k) === k.heimat;
+  el['a-heimatpfeil'].hidden = da;
+  if (!da) el['a-heimatpfeil'].style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+  setzen('a-heimat', da ? `⌂ ${sd.name} · hier` : `⌂ ${sd.name} · ${weit >= 1000 ? `${(weit / 1000).toFixed(1).replace('.', ',')} km` : `${Math.round(weit / 10) * 10} m`}`);
 }
 
 /** @param {string} ware @param {boolean} abwurf */

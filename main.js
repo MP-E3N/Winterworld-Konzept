@@ -9,7 +9,8 @@
  * DEBUG:    In der Konsole `ek` (siehe debug/konsole.js). F3 = Messwerte.
  */
 
-import { lokaleVerbindungErstellen } from './netz/lokal.js';
+import { lokaleVerbindungErstellen, lokaleVerbindungLaden } from './netz/lokal.js';
+import { spielstandLaden, autoSpeichern, autoZuruecksetzen } from './game/speichern.js';
 import { spielErstellen, bildSchritt } from './game/spiel.js';
 import { kamera, kameraEinrichten } from './render/kamera.js';
 import { bildZeichnen } from './render/zeichnen.js';
@@ -20,6 +21,7 @@ import {
   tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, telegrafSetzen, lichtUmschalten, brennstoffWaehlen, heizungUmschalten,
 } from './eingabe/tastatur.js';
 import { lagerEinrichten, lagerAktualisieren } from './ui/lager.js';
+import { depotEinrichten, depotAktualisieren } from './ui/depot.js';
 import { mausEinrichten } from './eingabe/maus.js';
 import { fundstellenZuruecksetzen } from './render/fundstellen.js';
 import { anzeigeAufbauen, anzeigeAktualisieren } from './ui/anzeige.js';
@@ -37,7 +39,9 @@ const debugEl = /** @type {HTMLElement} */ (document.getElementById('debug'));
 const hilfe = /** @type {HTMLElement} */ (document.getElementById('hilfe'));
 const hilfeKnopf = /** @type {HTMLElement} */ (document.getElementById('hilfe-knopf'));
 
-let spiel = spielErstellen(lokaleVerbindungErstellen(START_SEED, 'Eiskoloss'));
+// Gespeicherten Stand fortsetzen (M4d: gespeichert wird beim Halt in der Siedlung), sonst neue Welt.
+const gespeichert = spielstandLaden();
+let spiel = spielErstellen(gespeichert ? lokaleVerbindungLaden(gespeichert) : lokaleVerbindungErstellen(START_SEED, 'Eiskoloss'));
 
 /**
  * Neue Welt (auch aus der Konsole: ek.neu(seed)).
@@ -50,6 +54,7 @@ function neueWelt(seed) {
   weltZuruecksetzen();
   fundstellenZuruecksetzen();
   tastaturZuruecksetzen();
+  autoZuruecksetzen();
   kamera.folgen = true;
   kamera.zoomZiel = ZOOM_START;
 }
@@ -82,6 +87,7 @@ anzeigeAufbauen(hud, {
   brennstoff: (wahl) => brennstoffWaehlen(spiel, wahl),
 });
 lagerEinrichten(hud, () => spiel);
+depotEinrichten(hud, () => spiel);
 overlayEinrichten(debugEl);
 konsoleEinrichten(() => spiel, neueWelt);
 hilfeKnopf.addEventListener('click', () => hilfeUmschalten());
@@ -94,9 +100,11 @@ function bild(jetzt) {
   letzte = jetzt;
   steuerungSenden(spiel);
   bildSchritt(spiel, dt);
+  autoSpeichern(spiel, dt);
   bildZeichnen(ctx, spiel, dt);
   anzeigeAktualisieren(spiel, dt);
   lagerAktualisieren(spiel);
+  depotAktualisieren(spiel);
   overlayAktualisieren(debugEl, spiel, dt);
   requestAnimationFrame(bild);
 }

@@ -6,7 +6,7 @@
  */
 
 import { test, pruefe, gleich } from './harness.js';
-import { testwelt } from './helfer.js';
+import { testwelt, setzeAn } from './helfer.js';
 import { befehlAnwenden, befehlPruefen } from '../sim/befehle.js';
 import { tickAusfuehren } from '../sim/tick.js';
 import { truppVon } from '../sim/abfragen.js';
@@ -18,6 +18,16 @@ import { TAG_TICKS } from '../data/klima.js';
 const MIN = 1200; // Ticks je Minute
 /** Kohlehalde des Testgeländes, vom Start aus in Reichweite (wie in bergen.test.js). */
 const KOHLE = fundId(0, -1);
+
+/**
+ * Testwelt mit dem Koloss draußen vor der Siedlung (M4d): In der Siedlung heilt und isst die Crew dort.
+ * @returns {ReturnType<typeof testwelt>}
+ */
+function draussen() {
+  const w = testwelt();
+  setzeAn(w.k, 0, -150); // nur in Tests
+  return w;
+}
 
 /** @param {import('../sim/types.js').Zustand} state @param {number} n */
 function ticks(state, n) {
@@ -43,7 +53,7 @@ test('Crew: Start mit 4 Heizern, 6 Arbeitern, satt und gesund; Trupp = 6 gesunde
 });
 
 test('Essen: 10 Leute essen 10 kg je Kopf und Spieltag; ohne Vorräte sinkt die Sattheit', () => {
-  const w = testwelt();
+  const w = draussen();
   ticksBei(w, TAG_TICKS, 150);
   const gegessen = START_NAHRUNG_KG - w.k.lager.waren.nahrung;
   pruefe(Math.abs(gegessen - 10 * ESSEN_KG_TAG) <= 1, `gegessen ${gegessen} kg`);
@@ -54,7 +64,7 @@ test('Essen: 10 Leute essen 10 kg je Kopf und Spieltag; ohne Vorräte sinkt die 
 });
 
 test('Kälte: unter 0 °C an Bord sinkt die Gesundheit, Kranke entstehen; warm + satt erholt sich', () => {
-  const w = testwelt();
+  const w = draussen();
   ticksBei(w, 4 * MIN, -100); // −10 °C
   const g = w.k.crew.gesundheit;
   pruefe(g < VOLL * 0.6 && g > VOLL * 0.4, `nach 4 min bei −10 °C ${g}`);
@@ -65,7 +75,7 @@ test('Kälte: unter 0 °C an Bord sinkt die Gesundheit, Kranke entstehen; warm +
 });
 
 test('Hunger: lange ohne Vorräte macht krank', () => {
-  const w = testwelt();
+  const w = draussen();
   w.k.lager.waren.nahrung = 0; // nur in Tests
   ticksBei(w, TAG_TICKS + 5 * MIN, 150);
   pruefe(w.k.crew.gesundheit < VOLL * 0.8, `nach einem Hungertag ${w.k.crew.gesundheit}`);
@@ -89,14 +99,14 @@ test('Bergen: kranke Arbeiter bergen langsamer, ohne Gesunde gar nicht', () => {
 });
 
 test('Sterben: unter 25 % Gesundheit stirbt nach und nach jemand, die Moral sinkt', () => {
-  const w = testwelt();
+  const w = draussen();
   w.k.crew.gesundheit = 0; // nur in Tests
   const moral = w.k.crew.moral;
   ticksBei(w, MIN + 1, -100);
   gleich(w.k.crew.tote, 1, 'ein Toter nach einer Minute bei 0 %');
   gleich(w.k.crew.arbeiter, START_ARBEITER - 1, 'zuerst ein Arbeiter (größere Gruppe)');
   pruefe(w.k.crew.moral <= moral - TOD_MORAL, `Moral ${w.k.crew.moral}`);
-  const gesund = testwelt();
+  const gesund = draussen();
   gesund.k.crew.gesundheit = STERBEN_UNTER; // nur in Tests: genau an der Grenze
   ticksBei(gesund, 5 * MIN, 150);
   gleich(gesund.k.crew.tote, 0, 'an der Grenze stirbt niemand');

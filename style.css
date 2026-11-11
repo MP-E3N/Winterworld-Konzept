@@ -118,6 +118,33 @@ body { font: 14px/1.4 "Segoe UI", system-ui, sans-serif; color: #e8edf1; user-se
 .lagerpopup .holzziel .wahl button:first-child { border-left: none; }
 .lagerpopup .holzziel .wahl button.an { background: linear-gradient(180deg, #8a5a22, #c9852f); color: #fff1cf; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(255, 150, 40, 0.7); }
 
+/* Siedlung (M4d): Depot-Fenster am Schuppen (ui/depot.js), Heimat-Zeile unten rechts. */
+.depotpopup { width: 330px; }
+.depotpopup .richtung { display: flex; margin: 4px 0 8px; }
+.depotpopup .richtung button { flex: 1; height: 24px; cursor: pointer; border: 1px solid #3a240c; color: #2a1806;
+  font: 600 13px Georgia, "Times New Roman", serif; background: linear-gradient(180deg, #f0d48e, #c08f3e 60%, #93652a); }
+.depotpopup .richtung button:first-child { border-radius: 3px 0 0 3px; }
+.depotpopup .richtung button:last-child { border-radius: 0 3px 3px 0; border-left: none; }
+.depotpopup .richtung button.an { background: linear-gradient(180deg, #8a5a22, #c9852f); color: #fff1cf;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(255, 150, 40, 0.7); }
+.depotzeile { display: grid; grid-template-columns: 10px 58px 46px 14px 46px 1fr; align-items: center; gap: 4px; min-height: 24px; }
+.depotzeile i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(240, 215, 150, 0.6); }
+.depotzeile .name { color: #a9b6c2; }
+.depotzeile b { font-weight: 500; text-align: right; }
+.depotzeile .pfeil { color: #e0a46c; text-align: center; }
+.depotzeile .mengen { display: flex; gap: 3px; justify-content: flex-end; }
+.depotzeile.kopfzeile { min-height: 16px; color: #a9b6c2; font-size: 10px; }
+.depotzeile.kopfzeile b { font-weight: 400; }
+.depotzeile.kopfzeile i { border: none; }
+.depotzeile.leer b, .depotzeile.leer .name { opacity: 0.5; }
+.depotpopup button.matt { opacity: 0.35; cursor: default; }
+.depotzeile .mengen button, .depotpopup .warezeile button {
+  border: 1px solid #3a240c; border-radius: 3px; cursor: pointer; padding: 0 5px; height: 18px;
+  font: 600 11px/1 Georgia, "Times New Roman", serif; color: #2a1806;
+  background: linear-gradient(180deg, #f0d48e, #c08f3e 60%, #93652a);
+}
+.heimat { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #e0a46c; margin-bottom: 4px; }
+
 /* Crew (M4b): drei kleine Balken unter der Crew-Zeile. */
 .crewwerte { gap: 8px; }
 .mini { display: inline-flex; align-items: center; gap: 3px; flex: 1; }

@@ -149,6 +149,19 @@ Die Ladung eines Wracks wird zu Abwurf-Haufen (vorhandene Bergemechanik, für al
 behält Koloss- und Trupp-ID; `sim/koloss/start.js` ist die einzige Stelle für Startwerte (auch für
 BEITRETEN). Zustand v10, Replay neu.
 
+## E-020 Heimstatt: Siedlung aus den Daten, Depot je Spieler, Speichern nur dort (2026-11-11, M4d)
+Nutzerentscheidungen: Heimatsiedlung am Start (weitere Siedlungen erst M5), **nur Depot** (kein Tausch,
+keine Belohnung), Crew wird dort gesund und satt, Tote lassen sich ersetzen und man kann bis zu 20 Kojen
+aufstocken, **automatisch speichern beim Halt in der Siedlung**.
+Die Siedlung steht wie das Gelände NICHT im Zustand (`data/siedlungen.js`), nur ihre Änderungen:
+`state.depots` (ein Eintrag je Spieler und Siedlung — Koop-tauglich, jeder hat sein eigenes Fach) und
+`k.heimat`. Gebäude sind achsparallele Rechtecke, die auch die Kollision prüft (Bild = Kollision).
+Anheuern mischt die gemeinsamen Crew-Werte anteilig (E-018 bleibt: keine Einzelpersonen).
+In der Siedlung isst die Crew dort (Bordvorräte bleiben), heilt in ~4 min, niemand stirbt.
+Speichern liegt in `game/` (liest nur): beim Eintreffen, nach jedem Befehl dort, sonst alle 20 s;
+geladen wird nur ein Stand derselben Zustandsversion. Kein Rauch aus den Hütten (Leistung).
+Zustand v11, Replay neu.
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige

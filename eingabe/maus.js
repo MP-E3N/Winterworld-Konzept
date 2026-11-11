@@ -7,6 +7,7 @@
  *             auf eine Fundstelle   → BERGEN_START (oder BERGEN_ABBRECHEN, wenn der Trupp schon dort ist)
  *             auf einen Abwurf      → AUFNEHMEN (oder BERGEN_ABBRECHEN)
  *             auf den eigenen Koloss → Lager-Popup auf/zu (Spieltest M4a, wie Taste I)
+ *             auf den Depot-Schuppen → Depot-Fenster auf/zu (abladen, beladen, Crew; M4d)
  *           Geht Bergen gerade nicht, wird nichts gesendet, der Ring leuchtet kurz rot (keine Warntexte).
  *           Rechte/mittlere Taste (Karte verschieben) und Mausrad gehören render/kamera.js.
  * LIEST:    Mausereignisse am Canvas, fundAnsicht.hover, Zustand über die Verbindung, Kamera
@@ -26,6 +27,8 @@ import { befehlPruefen } from '../sim/befehle.js';
 import { kolossVon, truppVon } from '../sim/abfragen.js';
 import { KOLOSS_LAENGE_M, KOLOSS_BREITE_M } from '../data/koloss.js';
 import { lagerUmschalten } from '../ui/lager.js';
+import { depotUmschalten } from '../ui/depot.js';
+import { siedlungAnsicht, depotUnter } from '../render/siedlungen.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -37,9 +40,10 @@ export function mausEinrichten(canvas, spielHolen) {
   canvas.addEventListener('pointermove', (ev) => {
     fundAnsicht.maus = { bx: ev.offsetX, by: ev.offsetY };
     // Eine Bildfolge hinterher — reicht, der Zeiger bewegt sich ja gerade.
-    canvas.style.cursor = fundAnsicht.hover || aufKoloss(spielHolen(), ev.offsetX, ev.offsetY) ? 'pointer' : '';
+    siedlungAnsicht.hover = fundAnsicht.hover ? -1 : depotUnter(ev.offsetX, ev.offsetY);
+    canvas.style.cursor = fundAnsicht.hover || aufKoloss(spielHolen(), ev.offsetX, ev.offsetY) || siedlungAnsicht.hover >= 0 ? 'pointer' : '';
   });
-  canvas.addEventListener('pointerleave', () => { fundAnsicht.maus = null; });
+  canvas.addEventListener('pointerleave', () => { fundAnsicht.maus = null; siedlungAnsicht.hover = -1; });
   canvas.addEventListener('pointerdown', (ev) => {
     if (ev.button !== 0) return;
     fundAnsicht.maus = { bx: ev.offsetX, by: ev.offsetY };
@@ -58,7 +62,9 @@ function klicken(spiel, bx, by) {
   const k = kolossVon(s, v.spieler);
   if (!k) return;
   if (!m) {
-    if (aufKoloss(spiel, bx, by)) lagerUmschalten();
+    const depot = depotUnter(bx, by);
+    if (depot >= 0) depotUmschalten(depot);
+    else if (aufKoloss(spiel, bx, by)) lagerUmschalten();
     return;
   }
   const t = truppVon(s, k);

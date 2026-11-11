@@ -13,6 +13,8 @@
  *             ek.funde(m)       Fundstellen im Umkreis m (Standard 600 m) mit Abstand und Rest
  *             ek.ladung()       beide Lager des eigenen Kolosses (t)
  *             ek.replay()       Protokoll dieser Fahrt als JSON (für Fehlerberichte)
+ *             ek.spielstand()   letzter Spielstand (gespeichert beim Halt in der Siedlung, M4d)
+ *             ek.spielstandLoeschen()  Spielstand löschen (ek.neu() löscht ihn NICHT)
  *             ek.kamera, ek.spiel, ek.verbindung, ek.optik()
  * LIEST:    das Spiel
  * SCHREIBT: nur über Befehle bzw. die Verbindung
@@ -30,6 +32,7 @@ import { kamera } from '../render/kamera.js';
 import { optikZahlen } from '../render/spuren.js';
 import { kachelZahlen } from '../render/welt.js';
 import { ansichtLicht } from '../render/licht.js';
+import { spielstandInfo, spielstandLoeschen } from '../game/speichern.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -77,6 +80,10 @@ export function konsoleEinrichten(spielHolen, neueWelt) {
       const t = (o) => Object.fromEntries(Object.entries(o).map(([w, kg]) => [w, kg / 1000]));
       return k ? { brennstoff: t(k.lager.brennstoff), waren: t(k.lager.waren) } : null;
     },
+    /** Letzter Spielstand (M4d): wann, Tick, Seed, Größe — oder null. */
+    spielstand: spielstandInfo,
+    /** Spielstand löschen; beim Neuladen beginnt eine neue Welt (bis zum nächsten Halt in der Siedlung). */
+    spielstandLoeschen() { spielstandLoeschen(); return 'gelöscht'; },
     optik: optikZahlen,
     kacheln: kachelZahlen,
     /** Dunkelheit vorgeben (0 = Tag … 1 = Nacht), null = wieder nach der Tageszeit (M4a).

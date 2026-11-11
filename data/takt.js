@@ -27,4 +27,4 @@ export const TEMPI = [1, 2, 4];
  * Version des Zustands-Schemas. Erhöhen, sobald sich Felder im Zustand ändern
  * (alte Spielstände werden dann nicht mehr geladen, Replays neu aufnehmen).
  */
-export const ZUSTAND_VERSION = 10; // v2: Wetter (Wind); v3: Tempo halten; v4: Maschinentelegraf; v5: Scheinwerfer (licht), Drehpunkt; v6: Ladung, Trupps, geborgen (M3); v7: Dampf, Brennstoff, Wärme (M4a); v8: Dampfvorrat, Heizung, zwei Lager, Abwürfe; v9: Crew (M4b); v10: Wracks, Liegenbleiben (M4c)
+export const ZUSTAND_VERSION = 11; // v2: Wetter (Wind); v3: Tempo halten; v4: Maschinentelegraf; v5: Scheinwerfer (licht), Drehpunkt; v6: Ladung, Trupps, geborgen (M3); v7: Dampf, Brennstoff, Wärme (M4a); v8: Dampfvorrat, Heizung, zwei Lager, Abwürfe; v9: Crew (M4b); v10: Wracks, Liegenbleiben (M4c); v11: Heimat, Depots (M4d)

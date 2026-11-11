@@ -35,5 +35,6 @@ export function neuerZustand(seed) {
     geborgen: [],
     abwuerfe: [],
     wracks: [],
+    depots: [],
   };
 }

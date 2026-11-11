@@ -26,6 +26,8 @@ import {
   FUNDARTEN, OELFAESSER, FUND_ZELLE_M, FUND_RAND_M, FUND_CHANCE, FUND_CHANCE_START, START_FUND_M,
   START_ABSTAND_M, OEL_AB_M, OEL_VOLL_M, OEL_GEWICHT_MAX,
 } from '../../data/fundstellen.js';
+import { SIEDLUNG_FREI_M } from '../../data/siedlungen.js';
+import { siedlungAnPunkt } from '../siedlung.js';
 
 /**
  * Eine Fundstelle (berechnet, nicht im Zustand).
@@ -94,6 +96,8 @@ export function fundstelleInZelle(seed, zx, zy) {
   // Gibt es hier eine? Rund um den Start öfter, direkt am Startpunkt nie.
   const abstand2 = xm * xm + ym * ym;
   if (abstand2 < START_ABSTAND_M * START_ABSTAND_M) return null;
+  // Nie mitten in einer Siedlung (M4d): Dort stehen Hütten, und man soll den Platz frei vorfinden.
+  if (siedlungAnPunkt(x, y, SIEDLUNG_FREI_M) >= 0) return null;
   const chance = abstand2 < START_FUND_M * START_FUND_M ? FUND_CHANCE_START : FUND_CHANCE;
   if (h1 % 100 >= chance) return null;
 

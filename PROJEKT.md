@@ -10,9 +10,9 @@ Crew und Rumpf am Leben — allein oder später mit 2–4 anderen Kolossen in de
 (Koop + Konkurrenz, kein Kampf). Eigene Welt im Stil des Frostpunk-Genres, aber ohne dessen
 Namen, Lore oder Grafik.
 
-**Stand 2026-11-10:** M0 Gerüst, M1 Fahren, M2 Welt und M3 Fundstellen & Bergen sind gebaut und
-spielbar; M4a (Kessel frisst Brennstoff, Tag/Nacht, Kälte) ist gebaut und wartet auf den Spieltest.
-Weiter geht es mit **M4b Crew**.
+**Stand 2026-11-11:** M0 Gerüst, M1 Fahren, M2 Welt, M3 Fundstellen & Bergen und M4a–c (Kessel,
+Tag/Nacht, Kälte, Crew, Liegenbleiben) sind spielbar. **M4d Heimstatt** (Depot, Crew anheuern,
+Speichern beim Halt, Neustart dort) ist gebaut und wartet auf den Spieltest.
 
 ---
 
@@ -73,7 +73,7 @@ nötig — Node wird nur für Tests gebraucht (später auch für den Server).
 | ✔ M1 | Fahren | Fahrphysik, Lenkung, Rutschen, Zoom |
 | ✔ M2 | Welt | Generator, Kollision, Kachel-Darstellung |
 | ✔ M3 | Fundstellen & Bergen | Fundstellen aus dem Seed, Klick → Bergen mit Ladebalken, Laderaum + Gewicht (Nebel später) |
-| ▶ M4 | Überleben | ✔ M4a Kessel/Brennstoff/Tag/Kälte · M4b Crew · M4c Eisbruch, Schaden, Liegenbleiben (Wrack) · M4d erste Siedlung |
+| ▶ M4 | Überleben | ✔ M4a Kessel/Brennstoff/Tag/Kälte · ✔ M4b Crew · ✔ M4c Liegenbleiben (Wrack) · M4d Heimstatt (gebaut, Spieltest offen) |
 | M5 | Ereignisse | Stürme mit Vorwarnung, Entscheidungen, Reichweiten-Ring, Aufträge |
 | M6 | Multiplayer | Node-Server, WebSocket, 2–4 Spieler, Vorhersage + Korrektur |
 | M7+ | Ausbau | Module, sichtbare Bergungstrupps, Abschleppen, echte Grafik, Ton |

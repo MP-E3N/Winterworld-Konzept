@@ -37,6 +37,13 @@
  * @property {number} trupp     ID seines Bergungstrupps (Index in state.trupps)
  * @property {Crew} crew        Mannschaft an Bord (M4b)
  * @property {number} kalt      Ticks ohne Brennstoff an Bord und ohne Druck (Gnadenfrist bis zum Liegenbleiben, M4c)
+ * @property {number} heimat    zuletzt besuchte Siedlung (Index in data/siedlungen.js SIEDLUNGEN, M4d) — Neustart dort
+ */
+
+/**
+ * Depot eines Spielers in einer Siedlung (M4d, Nutzerentscheidung: nur einlagern und abholen).
+ * Angelegt beim ersten Einlagern; Index = ID. Waren in kg (Holz aus beiden Lagern zusammen).
+ * @typedef {{id: number, siedlung: number, spieler: number, kohle: number, holz: number, oel: number, nahrung: number}} Depot
  */
 
 /**
@@ -115,6 +122,7 @@
  * @property {Geborgen[]} geborgen
  * @property {Abwurf[]} abwuerfe
  * @property {Wrack[]} wracks        liegengebliebene Kolosse (M4c, F6), Index = ID
+ * @property {Depot[]} depots        Depots in Siedlungen je Spieler (M4d), Index = ID
  */
 
 /**
@@ -139,9 +147,12 @@
  * @typedef {{art: 'UMLAGERN', spieler: number, nach: number, kg: number}} BefehlUmlagern  Holz ins Lager „nach“
  * @typedef {{art: 'HOLZZIEL', spieler: number, lager: number}} BefehlHolzziel
  * @typedef {{art: 'AUFNEHMEN', spieler: number, abwurf: number}} BefehlAufnehmen  Abwurf wieder bergen
+ * @typedef {{art: 'EINLAGERN', spieler: number, lager: number, ware: string, kg: number}} BefehlEinlagern  Koloss-Lager → Depot (M4d)
+ * @typedef {{art: 'AUSLAGERN', spieler: number, lager: number, ware: string, kg: number}} BefehlAuslagern  Depot → Koloss-Lager
+ * @typedef {{art: 'CREW', spieler: number, gruppe: 'heizer' | 'arbeiter', anzahl: number}} BefehlCrew  +1 anheuern, −1 absetzen
  * @typedef {BefehlBeitreten | BefehlSteuern | BefehlDruck | BefehlTelegraf | BefehlLicht | BefehlBergenStart
  *   | BefehlBergenAbbrechen | BefehlBrennstoff | BefehlHeizung | BefehlAbwerfen | BefehlUmlagern | BefehlHolzziel
- *   | BefehlAufnehmen} Befehl
+ *   | BefehlAufnehmen | BefehlEinlagern | BefehlAuslagern | BefehlCrew} Befehl
  */
 
 /**

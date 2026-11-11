@@ -17,6 +17,7 @@ import './kessel.test.js';
 import './lager.test.js';
 import './crew.test.js';
 import './wrack.test.js';
+import './siedlung.test.js';
 import './determinismus.test.js';
 import './regeln.test.js';
 

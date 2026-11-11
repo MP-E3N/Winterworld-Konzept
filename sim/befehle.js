@@ -7,7 +7,8 @@
  *           jeden Befehl genauso prüfen wie das Einzelspiel.
  * LIEST:    state.spieler, state.kolosse, data/koloss.js
  * SCHREIBT: state.spieler, state.kolosse (Steuerwerte, Feuerstufe, Brennstoff, Heizung, Telegraf, Licht);
- *           Bergen und Lager über sim/befehle-lager.js
+ *           Bergen und Lager über sim/befehle-lager.js, Depot und Crew in der Siedlung über
+ *           sim/befehle-siedlung.js
  * REGEL:    KONZEPT.md §8 Regel 4, CLAUDE.md Regel 1
  * DEBUG:    Abgelehnte Befehle landen mit Grund in der Konsole (game/spiel.js).
  *           Neuen Befehl? Typ in sim/types.js, Prüfung + Wirkung hier, Test in tests/befehle.test.js.
@@ -16,6 +17,7 @@
 import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF, BRENNSTOFFE } from '../data/koloss.js';
 import { kolossVon } from './abfragen.js';
 import { istLagerBefehl, lagerBefehlPruefen, lagerBefehlAnwenden, ganzImBereich } from './befehle-lager.js';
+import { istSiedlungsBefehl, siedlungsBefehlPruefen, siedlungsBefehlAnwenden } from './befehle-siedlung.js';
 import { START_ARBEITER } from '../data/crew.js';
 import { kolossStartwerte } from './koloss/start.js';
 
@@ -64,6 +66,7 @@ export function befehlPruefen(state, b) {
     return null;
   }
   if (istLagerBefehl(b)) return lagerBefehlPruefen(state, b, /** @type {import('./types.js').Koloss} */ (kolossVon(state, b.spieler)));
+  if (istSiedlungsBefehl(b)) return siedlungsBefehlPruefen(state, b, /** @type {import('./types.js').Koloss} */ (kolossVon(state, b.spieler)));
   if (b.art === 'BRENNSTOFF') {
     if (!ganzImBereich(b.wahl, 0, BRENNSTOFFE.length - 1)) return 'unbekannter Brennstoff';
     return null;
@@ -107,6 +110,8 @@ export function befehlAnwenden(state, b) {
     k.brennstoff = b.wahl;
   } else if (istLagerBefehl(b)) {
     lagerBefehlAnwenden(state, b, k);
+  } else if (istSiedlungsBefehl(b)) {
+    siedlungsBefehlAnwenden(state, b, k);
   }
   return { ok: true };
 }

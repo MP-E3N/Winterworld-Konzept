@@ -16,6 +16,7 @@ import { bergenSchritt } from './bergen.js';
 import { kesselSchritt } from './koloss/kessel.js';
 import { crewSchritt } from './koloss/crew.js';
 import { liegenPruefen } from './koloss/wrack.js';
+import { siedlungSchritt } from './siedlung.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 
@@ -30,6 +31,8 @@ export function tickAusfuehren(state) {
   for (const k of state.kolosse) {
     // Kessel vor dem Fahren: Der Schub dieses Ticks sieht schon den neuen Dampf (M4a).
     kesselSchritt(k, state);
+    // Hält er in einer Siedlung, wird sie seine Heimat (M4d).
+    siedlungSchritt(k);
     // Crew nach dem Kessel (sieht die neue Wärme an Bord), vor dem Bergen (Trupp = gesunde Arbeiter).
     crewSchritt(k, state);
     fahrSchritt(k, state.seed);

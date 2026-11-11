@@ -7,9 +7,9 @@
 
 1. **Lesen:** `CLAUDE.md` (Regeln, Gelernte Regeln) → dieses Dokument → `PROJEKT.md` (Überblick)
    → bei Bedarf `KONZEPT.md` (Spielidee, Bauplan §10, Entscheidungen §11),
-   `docs/ENTSCHEIDUNGEN.md` (E-001…E-016), `docs/specs/` (M2, M3, M4a).
+   `docs/ENTSCHEIDUNGEN.md` (E-001…E-020), `docs/specs/` (M2, M3, M4a–d).
 2. **Prüfen:** `powershell -ExecutionPolicy Bypass -File tools\run-tests.ps1` → muss „ALLES GRUEN“
-   melden (78 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
+   melden (95 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
 3. **Spielen:** Vorschau „eiskoloss“ starten (`.claude/launch.json`, Port 5176) →
    http://localhost:5176/. Steuerung hinter dem „?“. Konsole (F12): `ek.…`, z. B. `ek.neu(0)`
    = Testgelände, `ek.step(n)`, `ek.untergrund()`, `ek.kacheln()`, `ek.nacht(0.85)` (Dunkelheit vorgeben,
@@ -17,6 +17,47 @@
 4. **git:** Branch `main`, Remote `origin` = https://github.com/MP-E3N/Winterworld-Konzept
    (Repository „Winterworld Konzept“ des Nutzers). Commits: `2ae5d9c` M0+M1 · `2924611` M2 Welt ·
    `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · `7e5c53e` M3 Fundstellen & Bergen · danach **M4a + Spieltest M4a** (siehe `git log`).
+5. **Spielstand:** Seit M4d lädt die Seite den letzten Stand aus dem Browser (gespeichert beim Halt in
+   der Heimstatt). Frisch anfangen: `ek.spielstandLoeschen()` und neu laden. `ek.neu()` löscht ihn NICHT.
+
+## Stand 2026-11-11: M4d Heimstatt gebaut und committet (95 Tests grün, Depot-Fenster vom Nutzer freigegeben)
+
+Spec `docs/specs/M4d-siedlung.md`, Entscheidung E-020, **Zustand v11, Replay neu aufgenommen**
+(absichtlich: neue Felder `k.heimat`, `state.depots`; Crew heilt in der Siedlung).
+Nutzerentscheidungen: **Heimat am Start**, **nur Depot** (kein Tausch), Crew **heilen + satt, Tote
+ersetzen, über Startzahl aufstocken**, **automatisch speichern beim Halt in der Siedlung**.
+- **Siedlung aus den Daten** (`data/siedlungen.js`): „Heimstatt“, Mitte 60 m hinter dem Startplatz,
+  6 Hütten im Halbrund, Depot-Schuppen, Wärmeofen, Windschutz. Gebäude = Rechtecke, auch in der
+  Kollision (`gebaeudeAn` in `sim/siedlung.js`). Fundstellen aus dem Seed nie näher als 90 m.
+- **„In der Siedlung“** = Rumpfmitte ≤ 75 m von der Mitte; Depot/Crew/Speichern nur im Stand.
+  `siedlungSchritt` (Tick vor der Crew) setzt `k.heimat`. Neustart nach dem Wrack dort (`start.js`).
+- **Befehle** `sim/befehle-siedlung.js`: `EINLAGERN`/`AUSLAGERN {lager, ware, kg}`, `CREW {gruppe, ±1}`
+  (bis `KOJEN` 20, mindestens 1 an Bord; Neue kommen gesund, Werte anteilig gemischt).
+- **Crew in der Siedlung** (`crew.js` `inDerSiedlung`): isst dort (Bordvorräte unberührt), satt in ~1 min,
+  gesund in ~4 min, niemand stirbt.
+- **Speichern** `game/speichern.js`: localStorage „eiskoloss.spielstand“ beim Eintreffen, nach jedem
+  Befehl dort, sonst alle 20 s. `main.js` lädt beim Start (nur gleiche Zustandsversion);
+  `netz/lokal.js` `lokaleVerbindungLaden`. Konsole `ek.spielstand()`, `ek.spielstandLoeschen()`.
+- **Anzeige:** `render/siedlungen.js` (Platz, Trampelpfade, Hütten mit Schneedach/Tür/Holzstapel,
+  Blechschuppen mit dem eigenen Depot davor, Ofen mit Glut, Laternen; nachts Fenster/Laternen/Ofen
+  glühen über der Dunkelheit; fern Messing-Zeichen + Name; KEIN Hüttenrauch). HUD unten rechts
+  „⌂ Heimstatt“ mit Pfeil und Entfernung, oben „HEIMSTATT — Spielstand gespeichert“. Hilfe + F3-Zeile.
+- **Depot-Fenster** (`ui/depot.js`, Nutzer-Rückmeldung „muss intuitiver sein“): Klick auf den
+  Depot-Schuppen (Messingrahmen beim Darüberfahren, `siedlungAnsicht`/`depotUnter` in
+  render/siedlungen.js) → Fenster am Schuppen: Richtung ⇣ Abladen / ⇡ Beladen, je Ware an Bord ↔ im
+  Depot mit 1 t · 10 t · Alle, darunter Crew − / +. Außerhalb oder in Fahrt: Knöpfe matt.
+  Das Lager-Popup ist wieder wie vor M4d (⇣ = abwerfen); der erste Versuch mit Depot im Lager-Popup
+  ist verworfen. Im Browser geprüft (Klick, Abladen „Alle“, Beladen 1 t, matt beim Fahren).
+- Tests `tests/siedlung.test.js` (7); Crew-Tests laufen jetzt vor der Siedlung (`draussen()`).
+- Im Browser geprüft: Speichern + Laden (Depot und Crew kommen zurück), Popup-Knöpfe, Nacht, Fernansicht,
+  keine Konsolenfehler. Test-Spielstand danach gelöscht.
+
+### Nächster Schritt
+1. **Spieltest** M4b/M4c (Crew-Raten, Nächte) und M4d im längeren Spiel (Speichern/Neuladen,
+   Anheuern) durch den Nutzer — das Depot-Fenster hat er schon freigegeben („Passt, committen“).
+2. Committet und gepusht (siehe `git log`; Replay neu aufgenommen, Zustand v11).
+3. Danach M4 abschließen (Pflege-Durchgang) und **M5 Ereignisse** (Stürme, mehrere Siedlungen,
+   Aufträge) — Spec zuerst, Fragen an den Nutzer.
 
 ## Stand 2026-11-11 spät nachts: M4c Liegenbleiben gebaut und committet (88 Tests grün)
 

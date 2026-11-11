@@ -5,8 +5,8 @@
  * ZWECK:    Nutzerentscheidung: Der Koloss bleibt NUR liegen, wenn die Crew tot ist oder wenn kein
  *           Brennstoff mehr an Bord ist und der Kessel kalt bleibt (nach einer Gnadenfrist). Dann
  *           bleibt ein Wrack in der Welt, seine Ladung liegt als Haufen drumherum (wie Abgeworfenes —
- *           jeder kann sie bergen), und der Spieler startet mit einem einfachen Koloss neu. Bis zur
- *           ersten Siedlung (M4d) am Startpunkt.
+ *           jeder kann sie bergen), und der Spieler startet mit einem einfachen Koloss neu — in der
+ *           zuletzt besuchten Siedlung (k.heimat, M4d).
  * LIEST:    Koloss (Crew, Lager, Dampf), data/wrack.js
  * SCHREIBT: state.wracks, state.abwuerfe, k.kalt; beim Neustart den ganzen Koloss und seinen Trupp
  * REGEL:    docs/specs/M4c-liegenbleiben.md, KONZEPT.md F6
@@ -47,8 +47,9 @@ export function wrackMachen(state, k) {
   const m = rumpfMitte(k);
   state.wracks.push({ id: state.wracks.length, koloss: k.id, name: k.name, x: m.x, y: m.y, h: k.h, tick: state.tick });
   ladungAblegen(state, k, m);
-  // Neustart: frischer Koloss, gleiche ID, gleicher Trupp (der wartet wieder an Bord).
-  const neu = kolossStartwerte(k.id, k.besitzer, k.name, k.trupp);
+  // Neustart: frischer Koloss in der Heimat (zuletzt besuchte Siedlung, M4d), gleiche ID, gleicher
+  // Trupp (der wartet wieder an Bord). Das Depot dort bleibt.
+  const neu = kolossStartwerte(k.id, k.besitzer, k.name, k.trupp, k.heimat);
   Object.assign(k, neu);
   const t = state.trupps[k.trupp];
   t.fund = -1; t.abwurf = -1; t.fortschritt = 0; t.leute = gesundeArbeiter(k.crew);

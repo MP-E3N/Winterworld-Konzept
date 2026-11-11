@@ -27,15 +27,36 @@ import { TEMPI } from '../data/takt.js';
  */
 export function lokaleVerbindungErstellen(seed, name) {
   const state = neuerZustand(seed);
+  // Im Einzelspiel ist man immer der erste Spieler. Die Nummer kommt trotzdem aus der
+  // Verbindung, damit die Oberfläche das später nicht annehmen muss.
+  const v = verbindungUm(state, state.spieler.length);
+  v.senden({ art: 'BEITRETEN', spieler: v.spieler, name });
+  return v;
+}
+
+/**
+ * Weiterspielen mit einem geladenen Spielstand (M4d, game/speichern.js). Der Spieler ist schon
+ * beigetreten; das Protokoll beginnt leer (Replays starten dann bei diesem Stand).
+ * @param {{zustand: import('../sim/types.js').Zustand, spieler: number}} stand
+ * @returns {Verbindung}
+ */
+export function lokaleVerbindungLaden(stand) {
+  return verbindungUm(stand.zustand, stand.spieler);
+}
+
+/**
+ * Die Verbindung um einen vorhandenen Zustand.
+ * @param {import('../sim/types.js').Zustand} state
+ * @param {number} spieler
+ * @returns {Verbindung}
+ */
+function verbindungUm(state, spieler) {
   /** @type {Befehl[]} */
   let warteschlange = [];
   /** @type {ProtokollEintrag[]} */
   const protokoll = [];
   let pause = false;
   let tempo = 1;
-  // Im Einzelspiel ist man immer der erste Spieler. Die Nummer kommt trotzdem aus der
-  // Verbindung, damit die Oberfläche das später nicht annehmen muss.
-  const spieler = state.spieler.length;
 
   /** @type {Verbindung} */
   const v = {
@@ -57,6 +78,5 @@ export function lokaleVerbindungErstellen(seed, name) {
     tempoSetzen(faktor) { if (TEMPI.includes(faktor)) tempo = faktor; },
     protokoll: () => protokoll,
   };
-  v.senden({ art: 'BEITRETEN', spieler, name });
   return v;
 }
