@@ -49,7 +49,7 @@ Spec-Nachtrag oben in `docs/specs/M4a-kessel-kaelte.md`, Entscheidung E-016, Zus
 
 ### Nächster Schritt
 1. **Spieltest** durch den Nutzer (Bilder/s nachts? Dampfvorrat-Gefühl, Verbrauch, Popup).
-2. Committet (Nutzer: „Passt, committen“); Push nach GitHub noch offen.
+2. Committet (05d20af) und gepusht.
 3. Danach **M4b Crew** (Hunger, Gesundheit, Moral; Wärme an Bord bekommt Wirkung, Vorräte werden
    gegessen) — Spec zuerst.
 
@@ -121,7 +121,7 @@ Spec: `docs/specs/M4a-kessel-kaelte.md`, Entscheidung E-015.
 
 ### Nächster Schritt (damals — Spieltest kam, siehe oben)
 1. **Spieltest M4a** durch den Nutzer (Verbrauch, Trägheit des Drucks, Nacht, Kälte-Anzeige).
-2. Committet (Nutzer: „Passt, committen“); Push nach GitHub noch offen.
+2. Committet (05d20af) und gepusht.
 3. Danach **M4b Crew** (Hunger, Gesundheit, Moral; Wärme an Bord bekommt Wirkung) — Spec zuerst.
 
 ## Stand 2026-11-10 (nach Spieltest M2b, 9 Runden)
