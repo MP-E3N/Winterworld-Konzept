@@ -13,15 +13,11 @@
  *           Neuen Befehl? Typ in sim/types.js, Prüfung + Wirkung hier, Test in tests/befehle.test.js.
  */
 
-import {
-  DRUCKSTUFEN, START_DRUCK, START_X, START_Y, START_RICHTUNG, EINGABE_MAX, KOLOSS_BREITE_M, UM_PRO_METER,
-  TELEGRAF, TELEGRAF_STOPP, BRENNSTOFFE, START_KOHLE_KG, START_HOLZ_KG, DAMPF_MAX,
-} from '../data/koloss.js';
+import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF, BRENNSTOFFE } from '../data/koloss.js';
 import { kolossVon } from './abfragen.js';
 import { istLagerBefehl, lagerBefehlPruefen, lagerBefehlAnwenden, ganzImBereich } from './befehle-lager.js';
-import { BRENNSTOFFLAGER } from '../data/fundstellen.js';
-import { VOLL, START_HEIZER, START_ARBEITER, START_NAHRUNG_KG } from '../data/crew.js';
-import { START_WAERME } from '../data/klima.js';
+import { START_ARBEITER } from '../data/crew.js';
+import { kolossStartwerte } from './koloss/start.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 /** @typedef {import('./types.js').Befehl} Befehl */
@@ -88,19 +84,7 @@ export function befehlAnwenden(state, b) {
   if (b.art === 'BEITRETEN') {
     const id = state.kolosse.length;
     const trupp = state.trupps.length;
-    // Weitere Spieler starten nebeneinander (Abstand 3 Breiten), damit sie sich nicht überlappen.
-    const versatz = b.spieler * KOLOSS_BREITE_M * 3 * UM_PRO_METER;
-    state.kolosse.push({
-      id, besitzer: b.spieler, name: b.name,
-      x: START_X + versatz, y: START_Y, vx: 0, vy: 0, h: START_RICHTUNG, dreh: 0,
-      druck: START_DRUCK, gas: 0, lenkung: 0, telegraf: TELEGRAF_STOPP, antrieb: 0, licht: 0,
-      // Voller Kessel beim Start, etwas Brennstoff an Bord (M4a).
-      dampf: DAMPF_MAX, brennstoff: 0, feuerMg: 0, heizung: 0, waerme: START_WAERME,
-      lager: { brennstoff: { kohle: START_KOHLE_KG, holz: START_HOLZ_KG, oel: 0 }, waren: { holz: 0, nahrung: START_NAHRUNG_KG } },
-      holzZiel: BRENNSTOFFLAGER, trupp,
-      // Crew (M4b): gesund, satt, zufrieden.
-      crew: { heizer: START_HEIZER, arbeiter: START_ARBEITER, satt: VOLL, gesundheit: VOLL, moral: VOLL, essenMg: 0, sterben: 0, tote: 0 },
-    });
+    state.kolosse.push(kolossStartwerte(id, b.spieler, b.name, trupp));
     // Jeder Koloss hat genau einen Trupp (M3). fund/abwurf −1 = wartet an Bord.
     state.trupps.push({ id: trupp, koloss: id, fund: -1, abwurf: -1, leute: START_ARBEITER, fortschritt: 0 });
     state.spieler.push({ id: b.spieler, name: b.name, koloss: id });

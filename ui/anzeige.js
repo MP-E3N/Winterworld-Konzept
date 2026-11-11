@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * anzeige.js — Anzeigen am Bildrand: Tempo, Dampfmaschine, Kesseldruck, Maschinentelegraf, Wind,
- *              Boden, Laderaum (M3), Crew (M4b), Trupp, Brennstoff-Wahlschalter, Kälte, Uhr (M4a), Maßstab.
+ *              Boden, Laderaum (M3), Crew (M4b), Meldung beim Liegenbleiben (M4c), Trupp, Brennstoff-Wahlschalter, Kälte, Uhr (M4a), Maßstab.
  *
  * ZWECK:    Das Nötigste zum Fahren, schlicht (Nutzerwunsch aus Kronwege: keine Extra-Fenster,
  *           Bedienhinweise nur hinter „?“).
@@ -133,7 +133,7 @@ export function anzeigeAktualisieren(spiel, dtMs) {
   }
   uhr(s.tick);
   massstab();
-  const status = v.pausiert() ? 'PAUSE' : v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '';
+  const status = v.pausiert() ? 'PAUSE' : liegenMeldung(s, v.spieler, dtMs) || (v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '');
   el['a-status'].textContent = status;
   el['a-status'].hidden = status === '';
 }
@@ -182,6 +182,24 @@ function crew(c) {
     const breite = `${Math.round(wert / 10000)}%`;
     if (el[id].style.width !== breite) el[id].style.width = breite;
   }
+}
+
+/** Meldung nach dem Liegenbleiben: wie viele Wracks gab es zuletzt, wie lange steht sie noch (ms). */
+const liegen = { wracks: -1, restMs: 0 };
+
+/**
+ * Ist der eigene Koloss gerade liegen geblieben? Dann ein paar Sekunden oben eine Meldung (F6).
+ * @param {import('../sim/types.js').Zustand} s @param {number} spieler @param {number} dtMs
+ * @returns {string}
+ */
+function liegenMeldung(s, spieler, dtMs) {
+  if (liegen.wracks >= 0 && s.wracks.length > liegen.wracks) {
+    const w = s.wracks[s.wracks.length - 1];
+    if (s.kolosse[w.koloss]?.besitzer === spieler) liegen.restMs = 7000;
+  }
+  liegen.wracks = s.wracks.length;
+  liegen.restMs = Math.max(0, liegen.restMs - dtMs);
+  return liegen.restMs > 0 ? 'LIEGENGEBLIEBEN — das Wrack bleibt, Neustart am Startpunkt' : '';
 }
 
 /** @param {string} ware @param {boolean} abwurf */

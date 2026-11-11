@@ -140,6 +140,15 @@ Start mit 300 kg. Werte in Millionsteln, damit kleine Raten je Tick ganzzahlig b
 Lager-Popup: Draufsicht ohne Dach (Nutzerwahl) — Waren bedecken so viel Boden, wie sie vom Lager
 einnehmen; Öl als einzelne Fässer. Zustand v9, Replay neu aufgenommen.
 
+## E-019 Liegenbleiben nur bei toter Crew oder ohne Brennstoff (2026-11-11, M4c)
+M4c war zuerst mit Eisbruch (Eis-Last, Eislöcher, Risse), Rumpfschaden (Aufprall, Leck) und einem
+Knopf „Aufgeben“ gebaut. Nutzerwunsch nach dem ersten Blick: **alles davon entfernen** außer dem
+Liegenbleiben, wenn die Crew tot ist oder kein Brennstoff mehr an Bord ist (2 min Frist bei kaltem
+Kessel). Dünnes Eis bricht also nicht; es gibt keinen Rumpf.
+Die Ladung eines Wracks wird zu Abwurf-Haufen (vorhandene Bergemechanik, für alle bergbar). Neustart
+behält Koloss- und Trupp-ID; `sim/koloss/start.js` ist die einzige Stelle für Startwerte (auch für
+BEITRETEN). Zustand v10, Replay neu.
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige

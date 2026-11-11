@@ -36,6 +36,7 @@
  * @property {number} holzZiel  wohin neu geborgenes Holz kommt (0 = Brennstofflager, 1 = Warenlager)
  * @property {number} trupp     ID seines Bergungstrupps (Index in state.trupps)
  * @property {Crew} crew        Mannschaft an Bord (M4b)
+ * @property {number} kalt      Ticks ohne Brennstoff an Bord und ohne Druck (Gnadenfrist bis zum Liegenbleiben, M4c)
  */
 
 /**
@@ -113,6 +114,13 @@
  * @property {Trupp[]} trupps
  * @property {Geborgen[]} geborgen
  * @property {Abwurf[]} abwuerfe
+ * @property {Wrack[]} wracks        liegengebliebene Kolosse (M4c, F6), Index = ID
+ */
+
+/**
+ * Wrack eines liegengebliebenen Kolosses (F6). Die Ladung liegt als Abwürfe drumherum.
+ * @typedef {{id: number, koloss: number, name: string, x: number, y: number, h: number, tick: number}} Wrack
+ *          x, y = Rumpfmitte (µm), h = Richtung, tick = wann er liegen blieb
  */
 
 /**

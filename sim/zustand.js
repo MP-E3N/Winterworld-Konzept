@@ -34,5 +34,6 @@ export function neuerZustand(seed) {
     trupps: [],
     geborgen: [],
     abwuerfe: [],
+    wracks: [],
   };
 }

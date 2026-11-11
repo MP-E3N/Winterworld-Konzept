@@ -15,6 +15,7 @@ import { fahrSchritt } from './koloss/fahren.js';
 import { bergenSchritt } from './bergen.js';
 import { kesselSchritt } from './koloss/kessel.js';
 import { crewSchritt } from './koloss/crew.js';
+import { liegenPruefen } from './koloss/wrack.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 
@@ -32,6 +33,8 @@ export function tickAusfuehren(state) {
     // Crew nach dem Kessel (sieht die neue Wärme an Bord), vor dem Bergen (Trupp = gesunde Arbeiter).
     crewSchritt(k, state);
     fahrSchritt(k, state.seed);
+    // Bleibt er liegen (Crew tot, kein Brennstoff)? Dann Wrack + Neustart (M4c, F6).
+    liegenPruefen(k, state);
   }
   // 3. Bergen nach dem Fahren: Wer in diesem Tick losgefahren ist, bricht sofort ab.
   bergenSchritt(state);

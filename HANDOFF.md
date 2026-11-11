@@ -18,6 +18,25 @@
    (Repository „Winterworld Konzept“ des Nutzers). Commits: `2ae5d9c` M0+M1 · `2924611` M2 Welt ·
    `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · `7e5c53e` M3 Fundstellen & Bergen · danach **M4a + Spieltest M4a** (siehe `git log`).
 
+## Stand 2026-11-11 spät nachts: M4c Liegenbleiben gebaut und committet (88 Tests grün)
+
+Spec `docs/specs/M4c-liegenbleiben.md`, Entscheidung E-019, **Zustand v10, Replay neu aufgenommen**
+(absichtlich: neue Felder `k.kalt` und `state.wracks`).
+M4c war zuerst größer gebaut (Eisbruch mit Löchern und Rissen, Rumpfschaden, Leck, „Aufgeben“).
+**Nutzerwunsch: alles wieder raus bis auf das Liegenbleiben.** Dünnes Eis bricht nicht, es gibt keinen Rumpf.
+- `sim/koloss/wrack.js` (Tick nach dem Fahren): `liegenPruefen` — Crew tot → sofort; kein Brennstoff in
+  beiden Lagern (auch kein Holz im Warenlager) und Dampf 0 → nach 2 min (`data/wrack.js`
+  `GNADENFRIST_TICKS`). `wrackMachen`: Wrack in `state.wracks`, jede Ware als Abwurf-Haufen 14 m ums
+  Wrack, Neustart am Startpunkt über `sim/koloss/start.js` (Startwerte, auch für BEITRETEN).
+- Darstellung `render/wracks.js` (dunkel, eingeschneit); Meldung „LIEGENGEBLIEBEN …“ 7 s oben;
+  Hilfe-Absatz; F3-Zeile „Wrack“.
+- Tests `tests/wrack.test.js` (3). Im Browser geprüft: Crew tot → Wrack + Haufen + Meldung + Neustart,
+  keine Konsolenfehler.
+
+### Nächster Schritt
+1. **Spieltest** von M4b (Crew-Raten: reichen Vorräte, wie gefährlich sind Nächte?) und M4c.
+2. Danach **M4d erste Siedlung** (abgeben, speichern, Neustart dort) — Spec zuerst, Fragen an den Nutzer.
+
 ## Stand 2026-11-11 nachts: M4b Crew + Lager-Draufsicht gebaut und committet (85 Tests grün)
 
 Spec: `docs/specs/M4b-crew.md`, Entscheidung E-018, **Zustand v9, Replay neu aufgenommen** (absichtlich:
@@ -50,7 +69,7 @@ Kälte + Hunger machen krank; Leute können sterben; Moral nur Anzeige; Lager al
 ### Nächster Schritt
 1. **Spieltest M4b** durch den Nutzer: Reichen 300 kg Vorräte? Wird es nachts zu schnell gefährlich?
    Gefällt der Blick ins Lager?
-2. Committet nach Nutzerfreigabe („Passt, committen“); Push nach GitHub noch offen.
+2. Committet (b5c1e44) und gepusht.
 3. Danach M4c (Eisbruch, Rumpfschaden, Liegenbleiben) — Spec zuerst.
 
 ## Stand 2026-11-11: Spieltest M4a-2 — Heizung-Thermostat + Kessel-Anzeige (committet und auf main übernommen, 79 Tests grün)

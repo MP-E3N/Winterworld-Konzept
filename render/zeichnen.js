@@ -20,6 +20,7 @@ import { rauchZeichnen } from './rauch.js';
 import { funkenZeichnen } from './funken.js';
 import { fundstellenZeichnen } from './fundstellen.js';
 import { fundMarkenZeichnen } from './fund-marken.js';
+import { wracksZeichnen } from './wracks.js';
 import { windVektor, schneetreibenAktualisieren, schneetreibenZeichnen } from './wind.js';
 import { lageZumZeichnen } from '../game/spiel.js';
 import { kolossVon } from '../sim/abfragen.js';
@@ -69,6 +70,7 @@ export function bildZeichnen(ctx, spiel, dtMs) {
   schmutzZeichnen(ctx);
   spurenZeichnen(ctx);
   fundstellenZeichnen(ctx, s);
+  wracksZeichnen(ctx, s);
   schneetreibenZeichnen(ctx);
   const mitLicht = rumpfe.filter((_, i) => s.kolosse[i].licht === 1);
   lichtkegelZeichnen(ctx, mitLicht);
