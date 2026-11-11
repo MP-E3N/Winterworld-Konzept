@@ -18,6 +18,27 @@
    (Repository „Winterworld Konzept“ des Nutzers). Commits: `2ae5d9c` M0+M1 · `2924611` M2 Welt ·
    `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · `7e5c53e` M3 Fundstellen & Bergen · danach **M4a + Spieltest M4a** (siehe `git log`).
 
+## Stand 2026-11-11: Spieltest M4a-2 — Heizung-Thermostat + Kessel-Anzeige (committet und auf main übernommen, 79 Tests grün)
+
+Nutzer-Rückmeldung: Bilder/s nachts besser (Punkt 1 von unten erledigt), Brennstoff einsammeln und
+umlagern geht mühelos. Gesichert: `e17b431` auf `main` + Tag **`vor-kessel-test`**; gearbeitet auf
+Branch **`test-kessel`**. Zurück zum alten Stand: `git switch main` (Änderungen vorher verwerfen
+oder committen). Entscheidung E-017.
+
+1. **Heizung = Thermostat:** hält immer +23 °C (`HEIZUNG_ZIEL`, data/klima.js), verbrennt je Zehntel °C
+   Lücke zu „außen + Kesselwärme“ `HEIZUNG_MG_JE_ZEHNTEL` (data/koloss.js): bei −20 °C/Mittel ≈ 44 kg/min,
+   bei −45 °C/Volldampf ≈ 104 kg/min, warm genug = 0. `heizungsLuecke()` in sim/koloss/kessel.js.
+   Im Browser: −26 °C draußen → an Bord 23 °C.
+2. **Kessel:** Regel war schon so gewünscht (Feuerstufe = wie schnell, nicht wie hoch; im Stand wird
+   jede Stufe voll — im Browser geprüft: „Schwach“ von 42 % auf 100 %). Geändert nur die Anzeige.
+3. **Anzeige:** Manometer jetzt 0–100 %, darüber **Feuer-Zeiger** (Halbrund grau→rot, Messingnadel =
+   Feuerstufe), Zeile „Kessel“: „Mittel · Druck 79 % ▲“ (▲ steigt, ▼ fällt). Canvas höher (H 140).
+
+### Nächster Schritt
+1. Nutzer hat die Testversion freigegeben („Passt, committen“) → committet, auf `main` übernommen.
+   Push nach GitHub noch offen.
+2. Danach **M4b Crew** (Hunger, Gesundheit, Moral; Wärme an Bord bekommt Wirkung) — Spec zuerst.
+
 ## Stand 2026-11-10 nachts: Spieltest M4a umgesetzt und committet (78 Tests grün)
 
 Nutzer-Spieltest M4a (Screenshot nachts, F3: 16 Bilder/s) mit fünf Punkten — alle umgesetzt.

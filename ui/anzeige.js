@@ -18,7 +18,7 @@ import { LAGER, BRENNSTOFFLAGER, WARENLAGER } from '../data/fundstellen.js';
 import { tonnen } from '../render/fundstellen.js';
 import { aussenTemperatur } from '../sim/abfragen.js';
 import { uhrzeit, tagNummer, dunkelheit } from '../sim/wetter/tag.js';
-import { BRENNSTOFFE, DAMPF_JE_STUFE } from '../data/koloss.js';
+import { BRENNSTOFFE, DAMPF_JE_STUFE, DAMPF_MAX } from '../data/koloss.js';
 import { untergrundAn } from '../sim/welt/untergrund.js';
 import { UNTERGRUND } from '../data/untergrund.js';
 import { DRUCKSTUFEN, EINGABE_MAX, TELEGRAF } from '../data/koloss.js';
@@ -53,7 +53,7 @@ export function anzeigeAufbauen(hud, aktionen) {
   hud.innerHTML = `
     <div class="tafel links-unten">
       <div class="tempo"><span id="a-tempo">0</span><small> km/h</small></div>
-      <canvas id="a-maschine" title="Kessel: Glut und Manometer zeigen den Druck, Kolben und Schwungrad laufen mit den Rädern"></canvas>
+      <canvas id="a-maschine" title="Feuer-Zeiger (oben, Q/E): wie stark angeheizt wird = wie schnell der Druck steigt. Manometer: Dampfvorrat in Prozent — auf jeder Feuerstufe wird der Kessel voll, nur verschieden schnell. Kolben und Schwungrad laufen mit den Rädern."></canvas>
       <div class="zeile"><span class="beschr">Kessel</span><span id="a-druck"></span>
         <span class="wahl" title="Brennstoff (B): Die Heizer verfeuern nur diesen. Ist er alle, geht das Feuer aus.">${BRENNSTOFFE.map((b, i) => `<button data-wahl="${i}" tabindex="-1">${b.name}</button>`).join('')}</span></div>
       <canvas id="a-telegraf" title="Maschinentelegraf: W/S oder Klick stellen den Hebel, die Maschine hält das Tempo. Der kleine Kupferzeiger zeigt das echte Tempo."></canvas>
@@ -61,7 +61,7 @@ export function anzeigeAufbauen(hud, aktionen) {
       <div class="zeile"><span class="beschr">Licht</span>
         <button id="a-licht" class="lampe" tabindex="-1" title="Scheinwerfer an/aus (L)"><canvas id="a-lampe"></canvas></button>
         <span class="beschr rechts">Heizung</span>
-        <button id="a-heizung" class="lampe" tabindex="-1" title="Heizung an Bord an/aus (O) — wärmt, kostet Brennstoff"><canvas id="a-ofen"></canvas></button></div>
+        <button id="a-heizung" class="lampe" tabindex="-1" title="Heizung an Bord an/aus (O) — hält +23 °C; je kälter draußen, desto mehr Brennstoff"><canvas id="a-ofen"></canvas></button></div>
       <div class="zeile"><span class="beschr">Wind</span><span id="a-windpfeil" class="windpfeil">➜</span><span id="a-wind"></span></div>
       <div class="zeile"><span class="beschr">Boden</span><span id="a-boden"></span></div>
       <div class="zeile"><span class="beschr">Kälte</span><span id="a-kaelte"></span></div>
@@ -104,7 +104,7 @@ export function anzeigeAktualisieren(spiel, dtMs) {
   const k = kolossVon(s, v.spieler);
   if (k) {
     el['a-tempo'].textContent = Math.abs(alsKmh(laengsTempo(k))).toFixed(0);
-    el['a-druck'].textContent = DRUCKSTUFEN[k.druck].name;
+    setzen('a-druck', `${DRUCKSTUFEN[k.druck].name} · ${kesselTrend(k.dampf)}`);
     const kmh = alsKmh(laengsTempo(k));
     telegrafZeichnen(telegraf, { stufe: k.telegraf, kmh, dtMs });
     const t = TELEGRAF[k.telegraf];
@@ -119,7 +119,7 @@ export function anzeigeAktualisieren(spiel, dtMs) {
     el['a-windpfeil'].style.transform = `rotate(${wind.rad}rad)`;
     el['a-wind'].textContent = `${wind.ms.toFixed(0)} m/s · ${windRelativ(s.wetter, (k.h / 65536) * 2 * Math.PI)}`;
     dampfmaschineZeichnen(maschine, {
-      druck: k.dampf / DAMPF_JE_STUFE, druckMax: DRUCKSTUFEN.length - 1, gas: k.antrieb / EINGABE_MAX, // Dampfvorrat (M4a)
+      druck: k.dampf / DAMPF_JE_STUFE, druckMax: DRUCKSTUFEN.length - 1, feuer: k.druck, feuerMax: DRUCKSTUFEN.length - 1, gas: k.antrieb / EINGABE_MAX, // Dampfvorrat (M4a)
       weg: wegVon(k.id), dtMs: v.pausiert() ? 0 : dtMs,
     });
     laderaum(s, k);
@@ -130,6 +130,22 @@ export function anzeigeAktualisieren(spiel, dtMs) {
   const status = v.pausiert() ? 'PAUSE' : v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '';
   el['a-status'].textContent = status;
   el['a-status'].hidden = status === '';
+}
+
+/** Letzter Dampfvorrat und geglättete Änderung je Bild — nur für den Pfeil in der Kessel-Zeile. */
+const trend = { dampf: -1, aenderung: 0 };
+
+/**
+ * Druck in Prozent mit Pfeil: ▲ steigt, ▼ fällt, nichts = hält (Spieltest M4a-2).
+ * WARUM geglättet: Die Simulation läuft in Ticks, die Bilder dazwischen — ohne Glätten flackert der Pfeil.
+ * @param {number} dampf
+ * @returns {string}
+ */
+function kesselTrend(dampf) {
+  if (trend.dampf >= 0) trend.aenderung += (dampf - trend.dampf - trend.aenderung) * 0.1;
+  trend.dampf = dampf;
+  const pfeil = trend.aenderung > 20 ? ' ▲' : trend.aenderung < -20 ? ' ▼' : '';
+  return `Druck ${Math.round((100 * dampf) / DAMPF_MAX)} %${pfeil}`;
 }
 
 /**

@@ -17,6 +17,7 @@ Siedlung) → M4d erste Siedlung.
   (18 km/h) 372 kg/min = 1,24 t/km, Volldampf (33 km/h) 1,2 t/min = 2,2 t/km. Öl heizt NICHT mehr
   schneller auf (nur halber Verbrauch). Ohne Feuer oder bei „ruht“ sinkt der Druck in ~3 min auf 0.
 - **Heizung** (Befehl `HEIZUNG`, Taste O, Ofen-Schalter neben der Lampe): +60 kg/min, +15 °C an Bord.
+  **Ab Spieltest M4a-2 (E-017):** Thermostat auf +23 °C, Verbrauch nach Lücke zu „außen + Kesselwärme“.
 - **Zwei Lager** (Nutzerwunsch): Brennstofflager 100 t (Kohle, Holz, Öl — daraus heizt der Kessel),
   Warenlager 60 t (Holz, Vorräte). `k.holzZiel` wählt, wohin neues Holz kommt. Gewicht: −20 % Schub
   je 100 t. Befehle `ABWERFEN {lager, ware, kg}` (1 t je Klick, Umschalt = alles), `UMLAGERN`

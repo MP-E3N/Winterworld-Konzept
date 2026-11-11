@@ -118,6 +118,17 @@ Lager: Nutzerwunsch Brennstofflager 100 t + Warenlager (Nutzerwahl 60 t), Holz p
 ein Haufen im Zustand (`state.abwuerfe`, Index = ID, leere bleiben mit kg 0), den jeder wieder
 aufnehmen kann — vorbereitet für Multiplayer. Zustand v8, Replay neu.
 
+## E-017 Heizung als Thermostat, Feuerstufe = Tempo des Druckanstiegs (2026-11-11, Spieltest M4a-2)
+Nutzerwunsch: Die Heizung hält immer +23 °C (`HEIZUNG_ZIEL`) und verbrennt dafür so viel, wie der
+Kessel allein nicht schafft (`HEIZUNG_MG_JE_ZEHNTEL` je Zehntel °C Lücke) — vorher +15 °C pauschal,
+dadurch je nach Außentemperatur mal +10, mal +30 °C. Ist es ohne Heizung warm genug, kostet sie nichts.
+Kessel: Die Feuerstufe begrenzte schon vorher nur die Nachfüll-Geschwindigkeit, nicht das Maximum
+(im Stand wird jede Stufe voll: Schwach ≈ 2¼ min, Mittel ≈ 40 s, Stark ≈ 20 s, Volldampf ≈ 12 s).
+Der Eindruck „Stufe = Höchstdruck“ kam von der Manometer-Skala 0–4 (gleiche Ziffern wie die Stufen)
+und vom Fahren, wo sich der Druck dort einpendelt, wo Feuer und Verbrauch gleich sind. Darum nur die
+Anzeige geändert (Testversion, Branch `test-kessel`): Manometer in Prozent, eigener Feuer-Zeiger
+darüber, Zeile „Kessel“ mit „Druck x % ▲/▼“. Kein neuer Zustand, Replay unverändert.
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige

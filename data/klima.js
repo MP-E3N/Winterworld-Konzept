@@ -47,6 +47,11 @@ export const WAERME_TRAEGHEIT = 600;
 /** Wärme an Bord beim Start (Zehntel °C). */
 export const START_WAERME = 120;
 
-/** Heizung an Bord (Schalter wie die Lampe, kostet HEIZUNG_G_TICK Brennstoff): so viel wärmer
- * (Zehntel °C) — nur solange das Feuer brennt. */
-export const HEIZUNG_WAERME = 150;
+/**
+ * Heizung an Bord = Thermostat (Spieltest M4a-2, Nutzerwunsch): Sie heizt immer auf diese Wärme
+ * (Zehntel °C, 230 = +23 °C) — nur solange das Feuer brennt. Was sie dafür verbrennt, hängt davon ab,
+ * wie viel der Kessel allein nicht schafft (data/koloss.js HEIZUNG_MG_JE_ZEHNTEL).
+ */
+export const HEIZUNG_ZIEL = 230;
+/** Mehr als so viel (Zehntel °C) über „außen + Kesselwärme“ schafft die Heizung nicht (70 °C). */
+export const HEIZUNG_MAX = 700;

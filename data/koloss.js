@@ -199,9 +199,14 @@ export const GLUT_G_TICK = 17;
 /** Ohne Feuer (oder „Kessel ruht“) kühlt der Kessel ab: so viel Dampf geht je Tick verloren (~3 min). */
 export const DAMPF_VERLUST = 100;
 
-/** Heizung an Bord (wie die Lampe ein Schalter): so viel Brennstoff zusätzlich (g Kohle je Tick,
- * ≈ 60 kg/min) … */
-export const HEIZUNG_G_TICK = 50;
+/**
+ * Heizung an Bord (Thermostat auf +23 °C, data/klima.js HEIZUNG_ZIEL): Brennstoff je Tick und je
+ * Zehntel °C, die sie über „außen + Kesselwärme“ hinaus heizen muss (mg Kohle).
+ * WARUM so viel: −20 °C draußen, Feuer „Mittel“ → der Kessel schafft +12 °C, die Heizung legt 11 °C
+ * drauf ≈ 44 kg/min. −45 °C nachts mit Volldampf → 26 °C Lücke ≈ 104 kg/min. Ist es warm genug,
+ * kostet sie nichts.
+ */
+export const HEIZUNG_MG_JE_ZEHNTEL = 333;
 
 /** Brennstoff an Bord beim Start (kg). */
 export const START_KOHLE_KG = 4000;

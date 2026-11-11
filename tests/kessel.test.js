@@ -12,8 +12,8 @@ import { befehlAnwenden, befehlPruefen } from '../sim/befehle.js';
 import { tickAusfuehren } from '../sim/tick.js';
 import { aussenTemperatur, nachStufe, laengsTempo, alsKmh } from '../sim/abfragen.js';
 import { uhrzeit, tagNummer, dunkelheit } from '../sim/wetter/tag.js';
-import { KESSEL_WAERME, HEIZUNG_WAERME, TEMP_START, TEMP_RING, TEMP_NACHT, TAG_TICKS } from '../data/klima.js';
-import { DAMPF_MAX, DAMPF_JE_STUFE, GLUT_G_TICK, HEIZUNG_G_TICK } from '../data/koloss.js';
+import { KESSEL_WAERME, HEIZUNG_ZIEL, TEMP_START, TEMP_RING, TEMP_NACHT, TAG_TICKS } from '../data/klima.js';
+import { DAMPF_MAX, DAMPF_JE_STUFE, GLUT_G_TICK, HEIZUNG_MG_JE_ZEHNTEL } from '../data/koloss.js';
 
 const MIN = 1200; // Ticks je Minute
 const SEK = 20;
@@ -92,14 +92,42 @@ test('Brennstoff: Holz brennt doppelt so schnell, Öl halb so schnell; leer = Fe
   pruefe(befehlPruefen(state, /** @type {any} */ ({ art: 'HEIZUNG', spieler: 0, an: 1 })) !== null, 'Heizung = 1 erlaubt');
 });
 
-test('Heizung: kostet zusätzlich Brennstoff und macht es an Bord wärmer', () => {
+/**
+ * Heizung an und aus nebeneinander 5 min laufen lassen (im Stand, Feuer „Mittel“).
+ * @param {number} xM  so weit draußen (Meter, kälter je weiter)
+ * @returns {{mehrKg: number, waerme: number, luecke: number}}
+ */
+function heizen(xM) {
   const ohne = testwelt(), mit = testwelt();
+  setzeAn(ohne.k, xM, 0); setzeAn(mit.k, xM, 0);
   pruefe(befehlAnwenden(mit.state, { art: 'HEIZUNG', spieler: 0, an: true }).ok, 'HEIZUNG');
   ticks(ohne.state, 6000);
   ticks(mit.state, 6000);
-  const mehr = kohle(ohne.k) - kohle(mit.k);
-  pruefe(Math.abs(mehr - (HEIZUNG_G_TICK * 6000) / 1000) <= 2, `Heizung kostet ${mehr} kg in 5 min`);
-  pruefe(Math.abs(mit.k.waerme - ohne.k.waerme - HEIZUNG_WAERME) <= 4, `wärmer um ${mit.k.waerme - ohne.k.waerme}`);
+  const ohneHeizung = aussenTemperatur(mit.state, mit.k) + nachStufe(KESSEL_WAERME, mit.k.druck * DAMPF_JE_STUFE);
+  return { mehrKg: kohle(ohne.k) - kohle(mit.k), waerme: mit.k.waerme, luecke: HEIZUNG_ZIEL - ohneHeizung };
+}
+
+test('Heizung: heizt immer auf +23 °C; je kälter draußen, desto mehr Brennstoff', () => {
+  const nah = heizen(0), weit = heizen(6000);
+  pruefe(Math.abs(nah.waerme - HEIZUNG_ZIEL) <= 3, `am Start an Bord ${nah.waerme}`);
+  pruefe(Math.abs(weit.waerme - HEIZUNG_ZIEL) <= 3, `6 km draußen an Bord ${weit.waerme}`);
+  // ±15 %: Der Wind (Windkälte) schwankt in den 5 min, die Lücke ist hier nur der Endwert.
+  const erwartet = (nah.luecke * HEIZUNG_MG_JE_ZEHNTEL * 6000) / 1e6;
+  pruefe(Math.abs(nah.mehrKg - erwartet) <= erwartet * 0.15, `Heizung kostet ${nah.mehrKg} kg in 5 min (Lücke ${nah.luecke})`);
+  pruefe(weit.mehrKg > nah.mehrKg + 50, `draußen nicht teurer: ${weit.mehrKg} / ${nah.mehrKg} kg`);
+});
+
+test('Heizung: ist es ohne sie schon warm genug, kostet sie nichts', () => {
+  const ohne = testwelt(), mit = testwelt();
+  for (const w of [ohne, mit]) {
+    befehlAnwenden(w.state, { art: 'DRUCK', spieler: 0, stufe: 4 });
+    w.state.wetter.windStaerke = 0; // nur in Tests: windstill
+  }
+  befehlAnwenden(mit.state, { art: 'HEIZUNG', spieler: 0, an: true });
+  ticks(ohne.state, 6000); ticks(mit.state, 6000);
+  pruefe(ohne.k.waerme >= HEIZUNG_ZIEL, `Volldampf allein ${ohne.k.waerme}`);
+  gleich(kohle(mit.k), kohle(ohne.k), 'gleich viel Kohle');
+  gleich(mit.k.waerme, ohne.k.waerme, 'Heizung kühlt nicht');
 });
 
 test('Tag: Start 08:00, Mitternacht nach 16 Spielstunden dunkel, Dämmerung dazwischen, alle 20 min gleich', () => {

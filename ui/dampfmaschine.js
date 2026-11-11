@@ -3,9 +3,11 @@
  * dampfmaschine.js — Kleine, laufende Dampfmaschine in der Anzeige.
  *
  * ZWECK:    Zeigt auf einen Blick, wie hart der Kessel arbeitet: Feuer im Kessel glüht je nach
- *           Druck, das Manometer zeigt die Druckstufe (rot = Volldampf), Kolben und Schwungrad
- *           laufen im Takt der echten Räder, Abdampf pufft bei jedem Kolbenhub.
- * LIEST:    Druck, Gas, gefahrene Meter (render/spuren.js wegVon)
+ *           Druck, das Manometer zeigt den Dampfvorrat in Prozent (rot = fast voll), darüber zeigt
+ *           der Feuer-Zeiger, wie stark angeheizt wird (Spieltest M4a-2: Feuerstufe = wie SCHNELL
+ *           der Druck steigt, nicht wie hoch). Kolben und Schwungrad laufen im Takt der echten
+ *           Räder, Abdampf pufft bei jedem Kolbenhub.
+ * LIEST:    Druck, Feuerstufe, Gas, gefahrene Meter (render/spuren.js wegVon)
  * SCHREIBT: nur das eigene kleine Canvas
  * REGEL:    KONZEPT.md §3 „Kesseldruck“
  * DEBUG:    Steht das Schwungrad, obwohl der Koloss fährt? wegVon() prüfen.
@@ -15,14 +17,16 @@ import { TRAKTION_DURCHMESSER_M } from '../data/ansicht.js';
 import { FARBEN_KOLOSS as F } from '../data/ansicht.js';
 
 /** Zeichenfläche in Grund-Einheiten … */
-const B = 204, H = 112;
+const B = 204, H = 140;
 /** … wird so stark vergrößert dargestellt (Nutzerwunsch: größer, vor allem das Manometer). */
 const SKALA = 1.45;
-/** Maschine (Kessel, Triebwerk) sitzt so weit unten, damit oben Platz fürs große Manometer ist. */
-const MASCHINE_Y = 20;
+/** Maschine (Kessel, Triebwerk) sitzt so weit unten, damit oben Platz für Feuer-Zeiger und Manometer ist. */
+const MASCHINE_Y = 48;
+/** Mitte des Manometers und des Feuer-Zeigers darüber (Grund-Einheiten). */
+const MANO_X = 176, MANO_Y = 58, FEUER_Y = 26;
 
 /** Zeichenzustand, der nur der Optik dient. */
-const optik = { nadel: 0, flackern: 0, letzterHub: 0, puffs: /** @type {{x: number, y: number, a: number, r: number}[]} */ ([]) };
+const optik = { nadel: 0, feuer: 0, flackern: 0, letzterHub: 0, puffs: /** @type {{x: number, y: number, a: number, r: number}[]} */ ([]) };
 
 /**
  * Bereitet das Canvas vor (Schärfe auf hochauflösenden Bildschirmen).
@@ -39,7 +43,8 @@ export function dampfmaschineEinrichten(c) {
 /**
  * Zeichnet ein Bild der Maschine.
  * @param {HTMLCanvasElement} c
- * @param {{druck: number, druckMax: number, gas: number, weg: number, dtMs: number}} w  druck = Dampfvorrat in Manometer-Stufen
+ * @param {{druck: number, druckMax: number, feuer: number, feuerMax: number, gas: number, weg: number, dtMs: number}} w
+ *        druck = Dampfvorrat in Manometer-Stufen, feuer = eingestellte Feuerstufe (0 = ruht)
  */
 export function dampfmaschineZeichnen(c, w) {
   const ctx = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
@@ -49,6 +54,7 @@ export function dampfmaschineZeichnen(c, w) {
   const winkel = (w.weg / (Math.PI * TRAKTION_DURCHMESSER_M)) * Math.PI * 2;
   const k = 1 - Math.exp(-w.dtMs / 250);
   optik.nadel += (anteil + (w.gas > 0 ? Math.sin(performance.now() / 90) * 0.015 * anteil : 0) - optik.nadel) * k;
+  optik.feuer += (w.feuer / w.feuerMax - optik.feuer) * (1 - Math.exp(-w.dtMs / 120));
   optik.flackern = 0.75 + Math.random() * 0.25;
 
   ctx.clearRect(0, 0, B, H);
@@ -64,7 +70,8 @@ export function dampfmaschineZeichnen(c, w) {
   puffs(ctx, w.dtMs);
   ctx.restore();
   // Kein Zittern mehr (Spieltest M4a): Wer zu viel verlangt, sieht die Nadel fallen.
-  manometer(ctx, optik.nadel, w.druckMax);
+  manometer(ctx, optik.nadel);
+  feuerZeiger(ctx, optik.feuer, w.feuerMax);
 }
 
 /**
@@ -152,12 +159,14 @@ function puffs(ctx, dtMs) {
 }
 
 /**
- * Großes Manometer oben rechts: Skala 0 … Volldampf mit Ziffern, roter Bereich am Ende,
- * Kupferrand mit Schrauben.
- * @param {CanvasRenderingContext2D} ctx @param {number} nadel  0 … 1 @param {number} stufen
+ * Großes Manometer rechts: Dampfvorrat 0 … 100 % mit Ziffern, roter Bereich am Ende (die genaue
+ * Zahl steht in der Zeile „Kessel“ darunter).
+ * WARUM Prozent statt 0 … 4 (Spieltest M4a-2): Die alten Ziffern sahen aus wie die Feuerstufen —
+ * man las „Mittel = höchstens 2“. Der Kessel wird aber auf jeder Stufe voll, nur verschieden schnell.
+ * @param {CanvasRenderingContext2D} ctx @param {number} nadel  0 … 1
  */
-function manometer(ctx, nadel, stufen) {
-  const mx = 178, my = 26, r = 24;
+function manometer(ctx, nadel) {
+  const mx = MANO_X, my = MANO_Y, r = 24, stufen = 4;
   const start = Math.PI * 0.75, ende = Math.PI * 2.25;
   // Gehäuse
   ctx.fillStyle = F.kupfer;
@@ -166,18 +175,19 @@ function manometer(ctx, nadel, stufen) {
   ctx.beginPath(); ctx.arc(mx, my, r - 1, 0, Math.PI * 2); ctx.fill();
   // Roter Bereich (Volldampf)
   ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(mx, my, r - 5, start + (ende - start) * (1 - 0.5 / stufen), ende); ctx.stroke();
+  ctx.beginPath(); ctx.arc(mx, my, r - 5, start + (ende - start) * 0.9, ende); ctx.stroke();
   // Teilstriche und Ziffern
   ctx.strokeStyle = '#2a2a2a'; ctx.fillStyle = '#2a2a2a'; ctx.lineWidth = 1.2;
-  ctx.font = 'bold 7px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 6px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let i = 0; i <= stufen; i++) {
     const a = start + ((ende - start) * i) / stufen;
     ctx.beginPath();
     ctx.moveTo(mx + Math.cos(a) * (r - 2), my + Math.sin(a) * (r - 2));
     ctx.lineTo(mx + Math.cos(a) * (r - 8), my + Math.sin(a) * (r - 8));
     ctx.stroke();
-    ctx.fillText(String(i), mx + Math.cos(a) * (r - 13), my + Math.sin(a) * (r - 13));
+    ctx.fillText(String((100 * i) / stufen), mx + Math.cos(a) * (r - 13), my + Math.sin(a) * (r - 13));
   }
+  ctx.fillText('%', mx, my + 15);
   // Nadel mit kleinem Gegengewicht
   const a = start + (ende - start) * Math.max(0, Math.min(1.02, nadel));
   ctx.strokeStyle = '#8f1d14'; ctx.lineWidth = 2; ctx.lineCap = 'round';
@@ -187,4 +197,40 @@ function manometer(ctx, nadel, stufen) {
   ctx.stroke();
   ctx.fillStyle = '#222';
   ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI * 2); ctx.fill();
+}
+
+/**
+ * Feuer-Zeiger über dem Manometer: Halbrund von „aus“ (dunkel) bis „Volldampf“ (rot), eine Nadel
+ * zeigt die eingestellte Feuerstufe (Q/E). Glüht mit, je stärker angeheizt wird.
+ * @param {CanvasRenderingContext2D} ctx @param {number} feuer  0 … 1 (geglättet) @param {number} stufen
+ */
+function feuerZeiger(ctx, feuer, stufen) {
+  const mx = MANO_X, my = FEUER_Y, r = 23;
+  const start = Math.PI, ende = Math.PI * 2;
+  // Gehäuse: Halbrund mit Kupferrand
+  ctx.fillStyle = F.kupfer;
+  ctx.beginPath(); ctx.arc(mx, my, r + 2, start, ende); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#2a211b';
+  ctx.beginPath(); ctx.arc(mx, my, r, start, ende); ctx.closePath(); ctx.fill();
+  // Farbige Felder je Stufe: aus = grau, dann immer heißer
+  const farben = ['#5b5650', '#a8582a', '#d9792b', '#f0a030', '#e0402a'];
+  ctx.lineWidth = 6;
+  for (let i = 0; i <= stufen; i++) {
+    const a0 = start + ((ende - start) * Math.max(0, i - 0.5)) / stufen;
+    const a1 = start + ((ende - start) * Math.min(stufen, i + 0.5)) / stufen;
+    ctx.strokeStyle = farben[Math.min(farben.length - 1, i)];
+    ctx.globalAlpha = i <= Math.round(feuer * stufen) ? 1 : 0.35;
+    ctx.beginPath(); ctx.arc(mx, my, r - 4, a0 + 0.03, a1 - 0.03); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // Nadel (Messing) mit dunklem Knopf
+  const a = start + (ende - start) * Math.max(0, Math.min(1, feuer));
+  ctx.strokeStyle = '#f3d27a'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + Math.cos(a) * (r - 2), my + Math.sin(a) * (r - 2)); ctx.stroke();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI * 2); ctx.fill();
+  // Beschriftung links daneben
+  ctx.fillStyle = '#efe8d5'; ctx.font = 'bold 7px Segoe UI, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText('FEUER', mx - r - 5, my - 4);
+  ctx.fillText('DRUCK', mx - r - 7, MANO_Y - 10);
 }
