@@ -13,16 +13,17 @@ import { lagerKg, lagerFrei, zielLager } from '../sim/koloss/lager.js';
 import { fundId } from '../sim/welt/fundstellen.js';
 import { LAGER, BRENNSTOFFLAGER, WARENLAGER } from '../data/fundstellen.js';
 import { TELEGRAF_STOPP } from '../data/koloss.js';
+import { START_NAHRUNG_KG } from '../data/crew.js';
 
 /** Ruine des Testgeländes (Holz). */
 const RUINE = fundId(-1, 0);
 
-test('Lager: Brennstofflager 100 t, Warenlager 60 t; Start mit 4 t Kohle und 1 t Holz', () => {
+test('Lager: Brennstofflager 100 t, Warenlager 60 t; Start mit 4 t Kohle, 1 t Holz und 300 kg Vorräten', () => {
   const { k } = testwelt();
   gleich(LAGER[BRENNSTOFFLAGER].kg, 100000, 'Brennstofflager');
   gleich(LAGER[WARENLAGER].kg, 60000, 'Warenlager');
   gleich(lagerKg(k, BRENNSTOFFLAGER), 5000, 'Start');
-  gleich(lagerFrei(k, WARENLAGER), 60000, 'Warenlager leer');
+  gleich(lagerFrei(k, WARENLAGER), 60000 - START_NAHRUNG_KG, 'Warenlager: nur die Start-Vorräte (M4b)');
   gleich(zielLager(k, 'kohle'), BRENNSTOFFLAGER, 'Kohle');
   gleich(zielLager(k, 'nahrung'), WARENLAGER, 'Vorräte');
   gleich(zielLager(k, 'holz'), BRENNSTOFFLAGER, 'Holz am Anfang');

@@ -2,7 +2,8 @@
 /**
  * lager.js — Lager-Popup neben dem eigenen Koloss (Spieltest M4a, Nutzerwunsch).
  *
- * ZWECK:    Zeigt Brennstofflager (Kohle, Holz, Öl) und Warenlager (Holz, Vorräte) mit Füllstand.
+ * ZWECK:    Zeigt Brennstofflager (Kohle, Holz, Öl) und Warenlager (Holz, Vorräte) mit Füllstand —
+ *           oben als Blick von oben in den offenen Laderaum (ui/lager-blick.js, M4b, Nutzerwunsch).
  *           Je Ware: abwerfen (1 t je Klick, mit Umschalt alles) — das landet als Haufen hinter dem
  *           Koloss auf der Karte und kann wieder geborgen werden. Holz lässt sich zwischen den Lagern
  *           umlagern, und man wählt, wohin neu geborgenes Holz kommt.
@@ -21,6 +22,7 @@ import { kamera, weltZuBild } from '../render/kamera.js';
 import { rumpfLage } from '../render/koloss-mass.js';
 import { tonnen } from '../render/fundstellen.js';
 import { lageZumZeichnen } from '../game/spiel.js';
+import { blickEinrichten, blickZeichnen } from './lager-blick.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -28,14 +30,20 @@ import { lageZumZeichnen } from '../game/spiel.js';
 const ABSTAND_PX = 24;
 
 let offen = false;
+/** Größe des Popups (Pixel), einmal nach dem Öffnen gemessen. WARUM: offsetWidth jedes Bild zu lesen
+ * zwingt den Browser, das Layout sofort neu zu rechnen (Spieltest M4b: Leistung). */
+let groesse = { b: 0, h: 0 };
 /** @type {HTMLElement} */
 let box;
+/** Blick in den Laderaum. @type {HTMLCanvasElement} */
+let blick;
 /** Elemente je „lager:ware“ bzw. Lager. @type {Record<string, HTMLElement>} */
 const el = {};
 
 /** Popup auf/zu (Klick auf den Koloss, Taste I). */
 export function lagerUmschalten() {
   offen = !offen;
+  groesse = { b: 0, h: 0 };
   if (box) box.hidden = !offen;
 }
 
@@ -49,15 +57,17 @@ export function lagerEinrichten(hud, spielHolen) {
   box.className = 'tafel lagerpopup';
   box.hidden = true;
   box.innerHTML = `<div class="kopf"><span>Lager</span><button class="zu" title="Schließen (I)">×</button></div>
+    <canvas class="blick" title="Blick in den Laderaum: Jede Ware bedeckt so viel Boden, wie sie vom Lager einnimmt."></canvas>
     ${LAGER.map((l, i) => `
     <div class="lagerblock">
       <div class="titel"><span>${l.name}</span><span id="l-zahl-${i}" class="lagerzahl"></span></div>
-      <div class="ladebalken"><span id="l-fuell-${i}"></span></div>
       ${l.waren.map((w) => zeile(i, w)).join('')}
     </div>`).join('')}
     <div class="holzziel"><span>Neues Holz ins</span>
       <span class="wahl"><button data-ziel="0" tabindex="-1">Brennstoff</button><button data-ziel="1" tabindex="-1">Waren</button></span></div>`;
   hud.appendChild(box);
+  blick = /** @type {HTMLCanvasElement} */ (box.querySelector('.blick'));
+  blickEinrichten(blick);
   for (const e of box.querySelectorAll('[id]')) el[e.id] = /** @type {HTMLElement} */ (e);
   /** @type {HTMLElement} */ (box.querySelector('.zu')).addEventListener('click', lagerUmschalten);
   box.addEventListener('click', (ev) => klick(spielHolen(), /** @type {MouseEvent} */ (ev)));
@@ -115,13 +125,13 @@ export function lagerAktualisieren(spiel) {
   for (const lager of [BRENNSTOFFLAGER, WARENLAGER]) {
     const kg = lagerKg(k, lager);
     setzen(`l-zahl-${lager}`, `${tonnen(kg)} / ${LAGER[lager].kg / 1000} t`);
-    el[`l-fuell-${lager}`].style.width = `${(100 * kg) / LAGER[lager].kg}%`;
     for (const w of LAGER[lager].waren) {
       const menge = lagerMenge(k, lager, w);
       setzen(`l-${lager}-${w}`, tonnen(menge));
       el[`l-zeile-${lager}-${w}`].classList.toggle('leer', menge === 0);
     }
   }
+  blickZeichnen(blick, k);
   for (const b of box.querySelectorAll('.holzziel button')) {
     b.classList.toggle('an', Number(/** @type {HTMLElement} */ (b).dataset.ziel) === k.holzZiel);
   }
@@ -129,10 +139,12 @@ export function lagerAktualisieren(spiel) {
   const r = rumpfLage(lageZumZeichnen(spiel, k));
   const [bx, by] = weltZuBild(r.x, r.y);
   const halb = Math.min((KOLOSS_LAENGE_M / 2) * kamera.zoom, 260);
-  const x = Math.min(kamera.breite - box.offsetWidth - 8, Math.max(8, bx + halb + ABSTAND_PX));
-  const y = Math.min(kamera.hoehe - box.offsetHeight - 8, Math.max(8, by - box.offsetHeight / 2));
-  box.style.left = `${Math.round(x)}px`;
-  box.style.top = `${Math.round(y)}px`;
+  if (groesse.b === 0) groesse = { b: box.offsetWidth, h: box.offsetHeight };
+  const x = Math.min(kamera.breite - groesse.b - 8, Math.max(8, bx + halb + ABSTAND_PX));
+  const y = Math.min(kamera.hoehe - groesse.h - 8, Math.max(8, by - groesse.h / 2));
+  const links = `${Math.round(x)}px`, oben = `${Math.round(y)}px`;
+  if (box.style.left !== links) box.style.left = links;
+  if (box.style.top !== oben) box.style.top = oben;
 }
 
 /** @param {string} id @param {string} text */

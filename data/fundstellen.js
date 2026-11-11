@@ -27,7 +27,8 @@ export const WAREN = [
   { ware: 'nahrung', name: 'Vorräte', farbe: '#c9b27a' },
 ];
 
-/** So viele Leute hat ein Bergungstrupp (ab M4 kommt das aus der Crew). */
+/** Auf so viele Leute ist die Arbeit je Stück bemessen (FUNDARTEN.arbeit). Ab M4b ist der Trupp die
+ * Zahl der gesunden Arbeiter (sim/koloss/crew.js) — mit 6 Gesunden dauert ein Stück genau so lange. */
 export const TRUPP_LEUTE = 6;
 
 /**

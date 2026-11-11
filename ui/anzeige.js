@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * anzeige.js — Anzeigen am Bildrand: Tempo, Dampfmaschine, Kesseldruck, Maschinentelegraf, Wind,
- *              Boden, Laderaum (M3), Trupp, Brennstoff-Wahlschalter, Kälte, Uhr (M4a), Maßstab.
+ *              Boden, Laderaum (M3), Crew (M4b), Trupp, Brennstoff-Wahlschalter, Kälte, Uhr (M4a), Maßstab.
  *
  * ZWECK:    Das Nötigste zum Fahren, schlicht (Nutzerwunsch aus Kronwege: keine Extra-Fenster,
  *           Bedienhinweise nur hinter „?“).
@@ -13,6 +13,7 @@
 import { kolossVon, laengsTempo, alsKmh, truppVon } from '../sim/abfragen.js';
 import { lagerKg, lagerMenge } from '../sim/koloss/lager.js';
 import { truppZiel } from '../sim/bergen.js';
+import { kranke } from '../sim/koloss/crew.js';
 import { ofenEinrichten, ofenZeichnen } from './ofen.js';
 import { LAGER, BRENNSTOFFLAGER, WARENLAGER } from '../data/fundstellen.js';
 import { tonnen } from '../render/fundstellen.js';
@@ -69,12 +70,17 @@ export function anzeigeAufbauen(hud, aktionen) {
         <span class="ladebalken"><span id="a-fuell-0"></span></span><span id="a-lager-0" class="lagerzahl"></span></div>
       <div class="zeile" title="Warenlager (Vorräte, Holz als Baustoff). Klick auf den Koloss oder I öffnet die Lager."><span class="beschr">Waren</span>
         <span class="ladebalken"><span id="a-fuell-1"></span></span><span id="a-lager-1" class="lagerzahl"></span></div>
+      <div class="zeile" title="Crew (M4b): Kälte unter 0 °C an Bord und Hunger machen krank, Kranke arbeiten nicht, unter 25 % Gesundheit sterben Leute."><span class="beschr">Crew</span><span id="a-crew"></span></div>
+      <div class="zeile crewwerte"><span class="beschr"></span>
+        <span class="mini" title="Sattheit — ohne Vorräte sinkt sie"><small>Satt</small><span class="minibalken"><span id="a-satt" class="satt"></span></span></span>
+        <span class="mini" title="Gesundheit — Kälte und Hunger kosten, Wärme und Essen heilen"><small>Gesund</small><span class="minibalken"><span id="a-gesund" class="gesund"></span></span></span>
+        <span class="mini" title="Moral — wird noch nur angezeigt"><small>Moral</small><span class="minibalken"><span id="a-moral" class="moral"></span></span></span></div>
       <div class="zeile"><span class="beschr">Trupp</span><span id="a-trupp"></span></div>
     </div>
     <div class="tafel rechts-unten"><div id="a-uhr" class="uhr"></div><div id="a-mass" class="mass"></div><div id="a-masstext"></div></div>
     <div id="a-status" class="status"></div>`;
   const ids = ['a-tempo', 'a-druck', 'a-befehl', 'a-licht', 'a-windpfeil', 'a-wind', 'a-boden', 'a-mass', 'a-masstext', 'a-status',
-    'a-fuell-0', 'a-fuell-1', 'a-lager-0', 'a-lager-1', 'a-trupp', 'a-kaelte', 'a-uhr', 'a-heizung'];
+    'a-fuell-0', 'a-fuell-1', 'a-lager-0', 'a-lager-1', 'a-trupp', 'a-crew', 'a-satt', 'a-gesund', 'a-moral', 'a-kaelte', 'a-uhr', 'a-heizung'];
   for (const id of ids) {
     el[id] = /** @type {HTMLElement} */ (hud.querySelector('#' + id));
   }
@@ -162,6 +168,20 @@ function laderaum(s, k) {
   const t = truppVon(s, k);
   const z = truppZiel(s, t);
   setzen('a-trupp', z ? `birgt ${zielName(z.ware, t.abwurf >= 0)} · ${t.leute} Mann` : `an Bord · ${t.leute} Mann`);
+  crew(k.crew);
+}
+
+/**
+ * Crew-Zeilen (M4b): Anzahl, Kranke, Tote, drei kleine Balken.
+ * @param {import('../sim/types.js').Crew} c
+ */
+function crew(c) {
+  const krank = kranke(c.heizer, c) + kranke(c.arbeiter, c);
+  setzen('a-crew', `${c.heizer} Heizer · ${c.arbeiter} Arbeiter${krank > 0 ? ` · ${krank} krank` : ''}${c.tote > 0 ? ` · ${c.tote} †` : ''}`);
+  for (const [id, wert] of /** @type {[string, number][]} */ ([['a-satt', c.satt], ['a-gesund', c.gesundheit], ['a-moral', c.moral]])) {
+    const breite = `${Math.round(wert / 10000)}%`;
+    if (el[id].style.width !== breite) el[id].style.width = breite;
+  }
 }
 
 /** @param {string} ware @param {boolean} abwurf */

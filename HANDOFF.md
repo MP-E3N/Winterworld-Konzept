@@ -18,6 +18,41 @@
    (Repository „Winterworld Konzept“ des Nutzers). Commits: `2ae5d9c` M0+M1 · `2924611` M2 Welt ·
    `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · `7e5c53e` M3 Fundstellen & Bergen · danach **M4a + Spieltest M4a** (siehe `git log`).
 
+## Stand 2026-11-11 nachts: M4b Crew + Lager-Draufsicht gebaut und committet (85 Tests grün)
+
+Spec: `docs/specs/M4b-crew.md`, Entscheidung E-018, **Zustand v9, Replay neu aufgenommen** (absichtlich:
+die Crew isst Vorräte, neue Felder). Nutzerentscheidungen: Gruppen mit Werten; Arbeiter = Bergetempo;
+Kälte + Hunger machen krank; Leute können sterben; Moral nur Anzeige; Lager als Draufsicht ohne Dach.
+- **Crew** `sim/koloss/crew.js` (Tick nach dem Kessel, vor dem Bergen), Werte `data/crew.js`:
+  4 Heizer + 6 Arbeiter, 300 kg Vorräte. Essen 10 kg/Kopf/Spieltag; ohne Vorräte sinkt `satt` in einem
+  Spieltag auf 0. Gesundheit: unter 0 °C an Bord −1 je Zehntel °C je Tick (−10 °C: ~8 min bis 0),
+  Hunger unter 30 % satt, Erholung ab +10 °C und halb satt (~20 min). Kranke = Anzahl × (1 − Gesundheit),
+  gerundet; `trupp.leute` = gesunde Arbeiter (Bergen langsamer; ohne Gesunde lehnt BERGEN_START ab).
+  Unter 25 % Gesundheit Todesfälle über Sammler (bei 0 % einer je Minute), zuerst Arbeiter, −10 % Moral.
+  Moral strebt träge zu „voll minus Kälte/Hunger/Krankheit“, ohne Wirkung.
+- **HUD:** Zeile „Crew“ (4 Heizer · 6 Arbeiter · x krank · y †) + drei Mini-Balken Satt/Gesund/Moral.
+  F3 zeigt eine Crew-Zeile.
+- **Lager-Popup** (`ui/lager-blick.js`): Blick von oben in den offenen Rumpf (Bug rechts), Räume
+  Brennstoff und Waren; Kohle als Brockenhaufen, Holz als Stämme, Öl als Fässer (je 200 kg eins),
+  Vorräte als Kisten und Säcke; leerer Rest = Bodenbretter. Malt nur bei Mengenänderung neu.
+  Die Füllbalken im Popup sind dafür weg (Zahlen stehen weiter daneben).
+- Im Browser geprüft (Popup, Crew-Zeile, keine Konsolenfehler). Spielgefühl der Raten noch ungetestet.
+- **Lager-Blick Runde 2 (Nutzer-Bild):** jetzt LÄNGS (Bug oben, 176 × 300 px), Steampunk (dunkles
+  Eisen, mattes Messing, gedeckte Farben), getrennte Fächer: Warenlager vorn (Holz, Vorräte),
+  Brennstoffbunker hinten (Kohle, Holz, Öl). Füllung von unten nach oben = Anteil am Lager, in ganzen
+  Reihen (Stamm 8 px, Fass 13 px, Kiste 12 px) — schon wenig Holz ist ein erkennbarer Stamm mit
+  Jahresringen. Popup 186 px breit, „Neues Holz ins“ bricht um.
+- **Leistung:** Der alte Blick malte bei jedem verbrannten kg alles neu (beim Fahren fast jedes Bild).
+  Jetzt Rumpf + Muster einmal vorgemalt, neu zusammengesetzt nur bei ≥ 100 kg Änderung (ein paar
+  drawImage). Popup-Größe einmal gemessen statt jedes Bild offsetWidth (erzwang Layout), CSS-Schatten-
+  filter am Canvas entfernt. Echte Bilder/s konnte ich in der versteckten Vorschau nicht messen.
+
+### Nächster Schritt
+1. **Spieltest M4b** durch den Nutzer: Reichen 300 kg Vorräte? Wird es nachts zu schnell gefährlich?
+   Gefällt der Blick ins Lager?
+2. Committet nach Nutzerfreigabe („Passt, committen“); Push nach GitHub noch offen.
+3. Danach M4c (Eisbruch, Rumpfschaden, Liegenbleiben) — Spec zuerst.
+
 ## Stand 2026-11-11: Spieltest M4a-2 — Heizung-Thermostat + Kessel-Anzeige (committet und auf main übernommen, 79 Tests grün)
 
 Nutzer-Rückmeldung: Bilder/s nachts besser (Punkt 1 von unten erledigt), Brennstoff einsammeln und
@@ -35,9 +70,14 @@ oder committen). Entscheidung E-017.
    Feuerstufe), Zeile „Kessel“: „Mittel · Druck 79 % ▲“ (▲ steigt, ▼ fällt). Canvas höher (H 140).
 
 ### Nächster Schritt
-1. Nutzer hat die Testversion freigegeben („Passt, committen“) → committet, auf `main` übernommen.
-   Push nach GitHub noch offen.
-2. Danach **M4b Crew** (Hunger, Gesundheit, Moral; Wärme an Bord bekommt Wirkung) — Spec zuerst.
+1. Nutzer hat die Testversion freigegeben („Passt, committen“) → committet, auf `main` übernommen,
+   gepusht (`5f5d6f4`).
+2. **Rauch-Versuche verworfen (2026-11-11):** Zwei Runden „mehr Rauch, stärker verweht, mehr Ruß“
+   (dann dichter/schwärzer, Säule ≤ 180 m, weiche Wolkenbilder) — Bilder/s fielen beim Nutzer.
+   Nutzerwunsch: zurück auf `5f5d6f4` („da war alles recht flüssig“). Die Änderungen liegen im
+   **git stash** („Rauch-Runden 1+2 …“, `git stash list`) — nur auf Wunsch wieder hervorholen.
+   Rauch-Werte also wie in Spieltest M2b (`render/rauch.js`, `render/schmutz.js`).
+3. Danach **M4b Crew** (Hunger, Gesundheit, Moral; Wärme an Bord bekommt Wirkung) — Spec zuerst.
 
 ## Stand 2026-11-10 nachts: Spieltest M4a umgesetzt und committet (78 Tests grün)
 

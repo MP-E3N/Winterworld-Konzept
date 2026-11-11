@@ -35,6 +35,21 @@
  * @property {Lager} lager     zwei Lager (kg je Ware), siehe data/fundstellen.js LAGER
  * @property {number} holzZiel  wohin neu geborgenes Holz kommt (0 = Brennstofflager, 1 = Warenlager)
  * @property {number} trupp     ID seines Bergungstrupps (Index in state.trupps)
+ * @property {Crew} crew        Mannschaft an Bord (M4b)
+ */
+
+/**
+ * Mannschaft (M4b, Nutzerentscheidung: Gruppen mit gemeinsamen Werten). Werte in Millionsteln
+ * (1 000 000 = 100 %), siehe data/crew.js.
+ * @typedef {Object} Crew
+ * @property {number} heizer      Anzahl Heizer (essen nur mit)
+ * @property {number} arbeiter    Anzahl Arbeiter (die gesunden bilden den Bergungstrupp)
+ * @property {number} satt        0 … 1 000 000
+ * @property {number} gesundheit  0 … 1 000 000 (darunter: anteilig krank, unter 25 % Todesfälle)
+ * @property {number} moral       0 … 1 000 000 (nur Anzeige in M4b)
+ * @property {number} essenMg     angefangenes kg Vorräte (Milligramm)
+ * @property {number} sterben     Sammler bis zum nächsten Todesfall
+ * @property {number} tote        Zahl der Toten bisher
  */
 
 /**
@@ -57,7 +72,7 @@
  * @property {number} koloss      ID des Kolosses, zu dem er gehört
  * @property {number} fund        ID der Fundstelle, an der er arbeitet; −1 = keine
  * @property {number} abwurf      ID des Abwurfs, den er aufnimmt; −1 = keiner (beide −1 = an Bord)
- * @property {number} leute       Anzahl Leute
+ * @property {number} leute       Anzahl Leute (ab M4b jeden Tick = gesunde Arbeiter der Crew)
  * @property {number} fortschritt Mann-Ticks am aktuellen Stück (data/fundstellen.js FUNDARTEN.arbeit)
  */
 

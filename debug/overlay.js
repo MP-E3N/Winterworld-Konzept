@@ -68,6 +68,7 @@ export function overlayAktualisieren(el, spiel, dtMs) {
     `Wind      ${(s.wetter.windStaerke / 10).toFixed(1)} m/s → ${((s.wetter.windRichtung / 65536) * 360).toFixed(0)}°  (Ziel ${((s.wetter.zielRichtung / 65536) * 360).toFixed(0)}°, Wechsel bei Tick ${s.wetter.naechsterWechsel})`,
     k ? `Trupp     Fund ${s.trupps[k.trupp].fund}  Fortschritt ${s.trupps[k.trupp].fortschritt}  Abwurf ${s.trupps[k.trupp].abwurf}  Ladung ${(ladungKg(k) / 1000).toFixed(1)} t` : '',
     k ? `Kessel    Feuer ${k.druck}  Dampf ${k.dampf}  Glut ${Math.floor(k.feuerMg / 1000)} g  Heizung ${k.heizung}  Brennstoff ${k.brennstoff}  an Bord ${(k.waerme / 10).toFixed(1)} °C` : '',
+    k ? `Crew      Heizer ${k.crew.heizer}  Arbeiter ${k.crew.arbeiter}  satt ${(k.crew.satt / 10000).toFixed(1)} %  gesund ${(k.crew.gesundheit / 10000).toFixed(1)} %  Moral ${(k.crew.moral / 10000).toFixed(1)} %  Tote ${k.crew.tote}  Vorräte ${k.lager.waren.nahrung} kg` : '',
     `Uhr       Tag ${tagNummer(s.tick)}  ${Math.floor(uhrzeit(s.tick) / 60)}:${String(uhrzeit(s.tick) % 60).padStart(2, '0')}  Dunkel ${dunkelheit(s.tick)}`,
     `Befehle   ${v.protokoll().length} aufgezeichnet`,
   ].join('\n');

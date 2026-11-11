@@ -19,7 +19,8 @@ import {
 } from '../data/koloss.js';
 import { kolossVon } from './abfragen.js';
 import { istLagerBefehl, lagerBefehlPruefen, lagerBefehlAnwenden, ganzImBereich } from './befehle-lager.js';
-import { TRUPP_LEUTE, BRENNSTOFFLAGER } from '../data/fundstellen.js';
+import { BRENNSTOFFLAGER } from '../data/fundstellen.js';
+import { VOLL, START_HEIZER, START_ARBEITER, START_NAHRUNG_KG } from '../data/crew.js';
 import { START_WAERME } from '../data/klima.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
@@ -95,11 +96,13 @@ export function befehlAnwenden(state, b) {
       druck: START_DRUCK, gas: 0, lenkung: 0, telegraf: TELEGRAF_STOPP, antrieb: 0, licht: 0,
       // Voller Kessel beim Start, etwas Brennstoff an Bord (M4a).
       dampf: DAMPF_MAX, brennstoff: 0, feuerMg: 0, heizung: 0, waerme: START_WAERME,
-      lager: { brennstoff: { kohle: START_KOHLE_KG, holz: START_HOLZ_KG, oel: 0 }, waren: { holz: 0, nahrung: 0 } },
+      lager: { brennstoff: { kohle: START_KOHLE_KG, holz: START_HOLZ_KG, oel: 0 }, waren: { holz: 0, nahrung: START_NAHRUNG_KG } },
       holzZiel: BRENNSTOFFLAGER, trupp,
+      // Crew (M4b): gesund, satt, zufrieden.
+      crew: { heizer: START_HEIZER, arbeiter: START_ARBEITER, satt: VOLL, gesundheit: VOLL, moral: VOLL, essenMg: 0, sterben: 0, tote: 0 },
     });
     // Jeder Koloss hat genau einen Trupp (M3). fund/abwurf −1 = wartet an Bord.
-    state.trupps.push({ id: trupp, koloss: id, fund: -1, abwurf: -1, leute: TRUPP_LEUTE, fortschritt: 0 });
+    state.trupps.push({ id: trupp, koloss: id, fund: -1, abwurf: -1, leute: START_ARBEITER, fortschritt: 0 });
     state.spieler.push({ id: b.spieler, name: b.name, koloss: id });
     return { ok: true };
   }

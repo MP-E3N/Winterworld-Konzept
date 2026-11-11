@@ -14,6 +14,7 @@ import { windSchritt } from './wetter/wind.js';
 import { fahrSchritt } from './koloss/fahren.js';
 import { bergenSchritt } from './bergen.js';
 import { kesselSchritt } from './koloss/kessel.js';
+import { crewSchritt } from './koloss/crew.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 
@@ -28,6 +29,8 @@ export function tickAusfuehren(state) {
   for (const k of state.kolosse) {
     // Kessel vor dem Fahren: Der Schub dieses Ticks sieht schon den neuen Dampf (M4a).
     kesselSchritt(k, state);
+    // Crew nach dem Kessel (sieht die neue Wärme an Bord), vor dem Bergen (Trupp = gesunde Arbeiter).
+    crewSchritt(k, state);
     fahrSchritt(k, state.seed);
   }
   // 3. Bergen nach dem Fahren: Wer in diesem Tick losgefahren ist, bricht sofort ab.

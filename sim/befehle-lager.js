@@ -16,6 +16,7 @@
 import { kolossSteht, inReichweite, fundRest, truppVon, rumpfMitte } from './abfragen.js';
 import { lagerMenge, lagerFrei, zielLager, passtIns, einlagern } from './koloss/lager.js';
 import { fundstelleMitId } from './welt/fundstellen.js';
+import { gesundeArbeiter } from './koloss/crew.js';
 import { cosW, sinW, teile, TRIG_EINS } from './lib/winkel.js';
 import { FUNDARTEN, LAGER, WAREN, ABWURF_HINTER_M, ABWURF_ZUSAMMEN_M, ABWURF_SEITE_M } from '../data/fundstellen.js';
 import { UM_PRO_METER } from '../data/koloss.js';
@@ -77,6 +78,7 @@ export function lagerBefehlPruefen(state, b, k) {
  * @returns {string | null}
  */
 function bergenErlaubt(k, x, y, ware, stueckKg) {
+  if (gesundeArbeiter(k.crew) <= 0) return 'keine gesunden Arbeiter';
   if (!kolossSteht(k)) return 'Koloss steht nicht (Telegraf auf Stopp)';
   if (!inReichweite(k, x, y)) return 'außer Reichweite';
   if (lagerFrei(k, zielLager(k, ware)) < stueckKg) return 'Lager voll';

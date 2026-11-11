@@ -129,6 +129,17 @@ und vom Fahren, wo sich der Druck dort einpendelt, wo Feuer und Verbrauch gleich
 Anzeige geändert (Testversion, Branch `test-kessel`): Manometer in Prozent, eigener Feuer-Zeiger
 darüber, Zeile „Kessel“ mit „Druck x % ▲/▼“. Kein neuer Zustand, Replay unverändert.
 
+## E-018 Crew als Gruppen mit gemeinsamen Werten, Lager als Blick ins Fahrzeug (2026-11-11, M4b)
+Nutzerentscheidungen: Crew = Gruppen (Heizer, Arbeiter) mit gemeinsamer Sattheit, Gesundheit und
+Moral — keine einzelnen Leute. Arbeiter bestimmen das Bergetempo (`trupp.leute` = gesunde Arbeiter,
+jeden Tick aus der Crew gesetzt), Kälte unter 0 °C an Bord und Hunger machen krank, sehr schlechte
+Gesundheit kostet Leben, Moral wird zunächst nur angezeigt; Heizer begrenzen das Feuer NICHT.
+Kranke = Anzahl × (1 − Gesundheit), gerundet — deterministisch ohne Würfeln; Todesfälle über einen
+Sammler. Essen 10 kg je Kopf und Spieltag (Spieltag = 20 min, sonst wären Vorräte bedeutungslos),
+Start mit 300 kg. Werte in Millionsteln, damit kleine Raten je Tick ganzzahlig bleiben.
+Lager-Popup: Draufsicht ohne Dach (Nutzerwahl) — Waren bedecken so viel Boden, wie sie vom Lager
+einnehmen; Öl als einzelne Fässer. Zustand v9, Replay neu aufgenommen.
+
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf
 verschiedenen Böden schon vor dem Generator testbar ist. `sim/welt/untergrund.js` ist die einzige
