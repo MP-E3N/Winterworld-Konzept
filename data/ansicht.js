@@ -65,10 +65,18 @@ export const RAD_EINSCHLAG_MAX = 0.2;
 export const SCHATTEN_PRO_HOEHE = { x: 0.42, y: 0.58 };
 
 /** Scheinwerfer: Reichweite (m) und halber Öffnungswinkel (Grad) je Lichtkegel. */
-export const LICHT_REICHWEITE_M = 85;
+export const LICHT_REICHWEITE_M = 130;
 export const LICHT_KEGEL_GRAD = 17;
-/** Deckkraft des Lichtkegels bei hellem Tag (nur ein goldener Schimmer auf dem Schnee). */
-export const LICHT_TAG_DECKKRAFT = 0.3;
+/** Deckkraft des warmen Schimmers im Lichtkegel bei Tag und in tiefer Nacht (Spieltest M5b: vorher bis 0,66 —
+ * das blendete alles weg; jetzt beleuchtet der Kegel, statt zu übermalen). */
+export const LICHT_TAG_DECKKRAFT = 0.06;
+export const LICHT_NACHT_DECKKRAFT = 0.16;
+
+/** Suchscheinwerfer (Spieltest M5b): schmaler Kegel, weit, folgt der Maus. Reichweite (m), halber Winkel (Grad) … */
+export const SUCHER_REICHWEITE_M = 650;
+export const SUCHER_KEGEL_GRAD = 5;
+/** … und so schnell schwenkt er hinterher (Grad je Sekunde) — ein schwerer Scheinwerfer, kein Laserpointer. */
+export const SUCHER_SCHWENK_GRAD_S = 120;
 /** So dunkel wird es in tiefer Nacht (0 … 1; ab M4a aus der Tageszeit, sim/wetter/tag.js). */
 export const NACHT_MAX = 0.85;
 /** Farbe der Nacht (r, g, b) — kaltes Dunkelblau. */

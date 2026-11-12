@@ -51,6 +51,8 @@ export function tastaturEinrichten(spielHolen, hilfeUmschalten) {
       case 'KeyL': lichtUmschalten(spiel); break;
       case 'KeyB': brennstoffWaehlen(spiel, null); break;
       case 'KeyO': heizungUmschalten(spiel); break;
+      case 'KeyF': sucherUmschalten(spiel); break;
+      case 'KeyG': laterneAbsetzen(spiel); break;
       case 'KeyI': lagerUmschalten(); break;
       case 'KeyE': druckAendern(spiel, +1); break;
       case 'KeyW': case 'ArrowUp': telegrafSchalten(spiel, +1); break;
@@ -155,6 +157,25 @@ export function lichtUmschalten(spiel) {
   const k = kolossVon(v.zustand(), v.spieler);
   if (!k) return;
   v.senden({ art: 'LICHT', spieler: v.spieler, an: k.licht === 0 });
+}
+
+/**
+ * Suchscheinwerfer an/aus (Taste F oder Knopf unten rechts; Spieltest M5b). Er zeigt zur Maus.
+ * @param {Spiel} spiel
+ */
+export function sucherUmschalten(spiel) {
+  const v = spiel.verbindung;
+  const k = kolossVon(v.zustand(), v.spieler);
+  if (k) v.senden({ art: 'SUCHER', spieler: v.spieler, an: k.sucher === 0 });
+}
+
+/**
+ * Laterne hinter dem Heck absetzen (Taste G oder Knopf unten rechts; Spieltest M5b).
+ * @param {Spiel} spiel
+ */
+export function laterneAbsetzen(spiel) {
+  const v = spiel.verbindung;
+  if (kolossVon(v.zustand(), v.spieler)) v.senden({ art: 'LATERNE', spieler: v.spieler });
 }
 
 /**

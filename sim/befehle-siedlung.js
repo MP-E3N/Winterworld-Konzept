@@ -53,11 +53,11 @@ export function siedlungsBefehlPruefen(state, b, k) {
   }
   if (b.art === 'CREW') {
     if (!GRUPPEN.includes(b.gruppe)) return 'unbekannte Gruppe';
-    const leute = k.crew.heizer + k.crew.arbeiter;
+    const leute = k.crew.heizer + k.crew.arbeiter + k.crew.passagiere;
     if (b.anzahl === 1) return leute < KOJEN ? null : 'alle Kojen belegt';
     if (b.anzahl === -1) {
       if (k.crew[b.gruppe] <= 0) return 'niemand in dieser Gruppe';
-      return leute > 1 ? null : 'einer muss an Bord bleiben';
+      return k.crew.heizer + k.crew.arbeiter > 1 ? null : 'einer muss an Bord bleiben';
     }
     return 'anzahl muss +1 oder −1 sein';
   }
@@ -89,7 +89,7 @@ export function siedlungsBefehlAnwenden(state, b, k) {
  */
 function anheuern(k, gruppe) {
   const c = k.crew;
-  const n = c.heizer + c.arbeiter;
+  const n = c.heizer + c.arbeiter + c.passagiere;
   c.satt = teile(c.satt * n + VOLL, n + 1);
   c.gesundheit = teile(c.gesundheit * n + VOLL, n + 1);
   c.moral = teile(c.moral * n + VOLL, n + 1);

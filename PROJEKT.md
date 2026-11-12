@@ -11,8 +11,10 @@ Crew und Rumpf am Leben — allein oder später mit 2–4 anderen Kolossen in de
 Namen, Lore oder Grafik.
 
 **Stand 2026-11-11:** M0 Gerüst, M1 Fahren, M2 Welt, M3 Fundstellen & Bergen und M4a–c (Kessel,
-Tag/Nacht, Kälte, Crew, Liegenbleiben) sind spielbar. **M4d Heimstatt** (Depot, Crew anheuern,
-Speichern beim Halt, Neustart dort) ist gebaut und wartet auf den Spieltest.
+Tag/Nacht, Kälte, Crew, Liegenbleiben) und M4d Heimstatt (Depot, Crew, Speichern) sind spielbar.
+**M5a Schneestürme** (Barometer, schlechte Sicht, Schneelast) und **M5b Rettungsauftrag** (Szenario: von der
+Stadt mit Generator aus Überlebende ~5 km entfernt finden; Karte unter Schneewehen, Signalballons als Wegweiser,
+knappe Rohstoffe) sind gebaut und warten auf den Spieltest.
 
 ---
 
@@ -73,8 +75,8 @@ nötig — Node wird nur für Tests gebraucht (später auch für den Server).
 | ✔ M1 | Fahren | Fahrphysik, Lenkung, Rutschen, Zoom |
 | ✔ M2 | Welt | Generator, Kollision, Kachel-Darstellung |
 | ✔ M3 | Fundstellen & Bergen | Fundstellen aus dem Seed, Klick → Bergen mit Ladebalken, Laderaum + Gewicht (Nebel später) |
-| ▶ M4 | Überleben | ✔ M4a Kessel/Brennstoff/Tag/Kälte · ✔ M4b Crew · ✔ M4c Liegenbleiben (Wrack) · M4d Heimstatt (gebaut, Spieltest offen) |
-| M5 | Ereignisse | Stürme mit Vorwarnung, Entscheidungen, Reichweiten-Ring, Aufträge |
+| ▶ M4 | Überleben | ✔ M4a Kessel/Brennstoff/Tag/Kälte · ✔ M4b Crew · ✔ M4c Liegenbleiben (Wrack) · ✔ M4d Heimstatt |
+| ▶ M5 | Ereignisse | M5a Stürme · M5b Rettungsauftrag (Schneewehen, Signalballons, Überlebende) — beide gebaut, Spieltest offen · M5c Reichweiten-Ring · M5d Siedlungen + Aufträge |
 | M6 | Multiplayer | Node-Server, WebSocket, 2–4 Spieler, Vorhersage + Korrektur |
 | M7+ | Ausbau | Module, sichtbare Bergungstrupps, Abschleppen, echte Grafik, Ton |
 

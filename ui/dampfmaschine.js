@@ -26,7 +26,7 @@ const MASCHINE_Y = 48;
 const MANO_X = 176, MANO_Y = 58, FEUER_Y = 26;
 
 /** Zeichenzustand, der nur der Optik dient. */
-const optik = { nadel: 0, feuer: 0, flackern: 0, letzterHub: 0, puffs: /** @type {{x: number, y: number, a: number, r: number}[]} */ ([]) };
+const optik = { nadel: 0, feuer: 0, glut: 0, flackern: 0, letzterHub: 0, puffs: /** @type {{x: number, y: number, a: number, r: number}[]} */ ([]) };
 
 /**
  * Bereitet das Canvas vor (Schärfe auf hochauflösenden Bildschirmen).
@@ -43,8 +43,10 @@ export function dampfmaschineEinrichten(c) {
 /**
  * Zeichnet ein Bild der Maschine.
  * @param {HTMLCanvasElement} c
- * @param {{druck: number, druckMax: number, feuer: number, feuerMax: number, gas: number, weg: number, dtMs: number}} w
- *        druck = Dampfvorrat in Manometer-Stufen, feuer = eingestellte Feuerstufe (0 = ruht)
+ * @param {{druck: number, druckMax: number, feuer: number, feuerMax: number, gas: number, weg: number, dtMs: number,
+ *          brennt: boolean, stufeName: string, kgMin: number}} w
+ *        druck = Dampfvorrat in Manometer-Stufen, feuer = eingestellte Feuerstufe (0 = ruht),
+ *        brennt = Brennstoff da, kgMin = gemessener Verbrauch (kg Brennstoff je Spielminute)
  */
 export function dampfmaschineZeichnen(c, w) {
   const ctx = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
@@ -55,12 +57,14 @@ export function dampfmaschineZeichnen(c, w) {
   const k = 1 - Math.exp(-w.dtMs / 250);
   optik.nadel += (anteil + (w.gas > 0 ? Math.sin(performance.now() / 90) * 0.015 * anteil : 0) - optik.nadel) * k;
   optik.feuer += (w.feuer / w.feuerMax - optik.feuer) * (1 - Math.exp(-w.dtMs / 120));
+  // Glut = wie stark es WIRKLICH brennt (aus, wenn kein Brennstoff da ist) — langsam, wie echte Glut.
+  optik.glut += ((w.brennt ? w.feuer / w.feuerMax : 0) - optik.glut) * (1 - Math.exp(-w.dtMs / 600));
   optik.flackern = 0.75 + Math.random() * 0.25;
 
   ctx.clearRect(0, 0, B, H);
   ctx.save();
   ctx.translate(0, MASCHINE_Y);
-  kessel(ctx, anteil);
+  kessel(ctx, optik.glut);
   const hub = Math.floor(winkel / Math.PI); // zwei Hübe pro Umdrehung
   if (hub !== optik.letzterHub) {
     optik.letzterHub = hub;
@@ -71,12 +75,33 @@ export function dampfmaschineZeichnen(c, w) {
   ctx.restore();
   // Kein Zittern mehr (Spieltest M4a): Wer zu viel verlangt, sieht die Nadel fallen.
   manometer(ctx, optik.nadel);
-  feuerZeiger(ctx, optik.feuer, w.feuerMax);
+  feuerZeiger(ctx, optik.feuer, w.feuerMax, w.brennt);
+  feuerText(ctx, w.brennt ? w.stufeName : 'erloschen', w.brennt ? w.kgMin : 0, w.feuer);
+}
+
+/** Farben der Feuerstufen: aus = grau, dann immer heißer. */
+const FEUER_FARBEN = ['#8c867e', '#c87a3e', '#e8913a', '#f5b44a', '#ff5a3a'];
+
+/**
+ * Links neben dem Feuer-Zeiger: Stufe in ihrer Farbe und der gemessene Verbrauch.
+ * @param {CanvasRenderingContext2D} ctx @param {string} name @param {number} kgMin @param {number} stufe
+ */
+function feuerText(ctx, name, kgMin, stufe) {
+  const x = MANO_X - 30;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#efe8d5'; ctx.font = 'bold 7px Segoe UI, sans-serif';
+  ctx.fillText('FEUER', x, 6);
+  ctx.fillStyle = name === 'erloschen' ? '#8c867e' : FEUER_FARBEN[Math.min(FEUER_FARBEN.length - 1, stufe)];
+  ctx.font = 'bold 9px Georgia, serif';
+  ctx.fillText(name, x, 16);
+  ctx.fillStyle = '#c9c2b4'; ctx.font = '7px Segoe UI, sans-serif';
+  ctx.fillText(`${kgMin < 10 ? kgMin.toFixed(1).replace('.', ',') : Math.round(kgMin)} kg/min`, x, 26);
 }
 
 /**
- * Liegender Kessel mit Feuertür (glüht je nach Druck) und Schornstein.
- * @param {CanvasRenderingContext2D} ctx @param {number} anteil
+ * Liegender Kessel mit Feuertür und Schornstein. Die Tür lodert so stark, wie das Feuer wirklich brennt
+ * (Spieltest M5a: „Feuer-Anzeige aussagekräftiger“) — ohne Brennstoff ist sie dunkel.
+ * @param {CanvasRenderingContext2D} ctx @param {number} anteil  Glut 0 … 1
  */
 function kessel(ctx, anteil) {
   // Schornstein
@@ -100,6 +125,16 @@ function kessel(ctx, anteil) {
   glut.addColorStop(1, 'rgba(120, 30, 10, 0)');
   ctx.fillStyle = glut;
   ctx.beginPath(); ctx.roundRect(6, 28, 12, 20, 2); ctx.fill();
+  // Flammenzungen: je stärker das Feuer, desto mehr und höher.
+  const zungen = Math.round(anteil * 4);
+  for (let i = 0; i < zungen; i++) {
+    const x = 8 + i * 2.6, hoch = (5 + anteil * 9) * (0.6 + Math.random() * 0.4);
+    ctx.fillStyle = i % 2 ? 'rgba(255, 210, 110, 0.9)' : 'rgba(255, 140, 40, 0.85)';
+    ctx.beginPath(); ctx.moveTo(x - 1.4, 47); ctx.quadraticCurveTo(x, 47 - hoch, x + 1.4, 47); ctx.fill();
+  }
+  // Gitter der Feuertür
+  ctx.strokeStyle = 'rgba(20, 20, 20, 0.7)'; ctx.lineWidth = 0.8;
+  for (const y of [33, 38, 43]) { ctx.beginPath(); ctx.moveTo(6, y); ctx.lineTo(18, y); ctx.stroke(); }
 }
 
 /**
@@ -202,9 +237,11 @@ function manometer(ctx, nadel) {
 /**
  * Feuer-Zeiger über dem Manometer: Halbrund von „aus“ (dunkel) bis „Volldampf“ (rot), eine Nadel
  * zeigt die eingestellte Feuerstufe (Q/E). Glüht mit, je stärker angeheizt wird.
+ * Innen glüht das Zifferblatt so stark, wie das Feuer wirklich brennt; ohne Brennstoff bleibt alles matt.
  * @param {CanvasRenderingContext2D} ctx @param {number} feuer  0 … 1 (geglättet) @param {number} stufen
+ * @param {boolean} brennt
  */
-function feuerZeiger(ctx, feuer, stufen) {
+function feuerZeiger(ctx, feuer, stufen, brennt) {
   const mx = MANO_X, my = FEUER_Y, r = 23;
   const start = Math.PI, ende = Math.PI * 2;
   // Gehäuse: Halbrund mit Kupferrand
@@ -212,25 +249,30 @@ function feuerZeiger(ctx, feuer, stufen) {
   ctx.beginPath(); ctx.arc(mx, my, r + 2, start, ende); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#2a211b';
   ctx.beginPath(); ctx.arc(mx, my, r, start, ende); ctx.closePath(); ctx.fill();
-  // Farbige Felder je Stufe: aus = grau, dann immer heißer
-  const farben = ['#5b5650', '#a8582a', '#d9792b', '#f0a030', '#e0402a'];
+  // Glut im Zifferblatt: wie ein Blick ins Feuerloch.
+  if (optik.glut > 0.02) {
+    const g = ctx.createRadialGradient(mx, my, 1, mx, my, r - 6);
+    g.addColorStop(0, `rgba(255, 200, 90, ${0.85 * optik.glut * optik.flackern})`);
+    g.addColorStop(1, 'rgba(200, 60, 20, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(mx, my, r - 6, start, ende); ctx.closePath(); ctx.fill();
+  }
+  // Farbige Felder je Stufe: bis zur eingestellten Stufe leuchtend, darüber matt; ohne Brennstoff alle matt.
   ctx.lineWidth = 6;
   for (let i = 0; i <= stufen; i++) {
     const a0 = start + ((ende - start) * Math.max(0, i - 0.5)) / stufen;
     const a1 = start + ((ende - start) * Math.min(stufen, i + 0.5)) / stufen;
-    ctx.strokeStyle = farben[Math.min(farben.length - 1, i)];
-    ctx.globalAlpha = i <= Math.round(feuer * stufen) ? 1 : 0.35;
+    ctx.strokeStyle = FEUER_FARBEN[Math.min(FEUER_FARBEN.length - 1, i)];
+    ctx.globalAlpha = brennt && i <= Math.round(feuer * stufen) ? 1 : 0.25;
     ctx.beginPath(); ctx.arc(mx, my, r - 4, a0 + 0.03, a1 - 0.03); ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  // Nadel (Messing) mit dunklem Knopf
+  // Nadel (Messing; grau, wenn das Feuer aus ist) mit dunklem Knopf
   const a = start + (ende - start) * Math.max(0, Math.min(1, feuer));
-  ctx.strokeStyle = '#f3d27a'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.strokeStyle = brennt ? '#f3d27a' : '#8c867e'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + Math.cos(a) * (r - 2), my + Math.sin(a) * (r - 2)); ctx.stroke();
   ctx.fillStyle = '#111';
   ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI * 2); ctx.fill();
-  // Beschriftung links daneben
   ctx.fillStyle = '#efe8d5'; ctx.font = 'bold 7px Segoe UI, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  ctx.fillText('FEUER', mx - r - 5, my - 4);
   ctx.fillText('DRUCK', mx - r - 7, MANO_Y - 10);
 }

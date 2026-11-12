@@ -8,6 +8,7 @@
  *             auf einen Abwurf      → AUFNEHMEN (oder BERGEN_ABBRECHEN)
  *             auf den eigenen Koloss → Lager-Popup auf/zu (Spieltest M4a, wie Taste I)
  *             auf den Depot-Schuppen → Depot-Fenster auf/zu (abladen, beladen, Crew; M4d)
+ *             auf das Lager der Überlebenden → RETTEN (M5b; nur wenn man es sieht)
  *           Geht Bergen gerade nicht, wird nichts gesendet, der Ring leuchtet kurz rot (keine Warntexte).
  *           Rechte/mittlere Taste (Karte verschieben) und Mausrad gehören render/kamera.js.
  * LIEST:    Mausereignisse am Canvas, fundAnsicht.hover, Zustand über die Verbindung, Kamera
@@ -29,6 +30,8 @@ import { KOLOSS_LAENGE_M, KOLOSS_BREITE_M } from '../data/koloss.js';
 import { lagerUmschalten } from '../ui/lager.js';
 import { depotUmschalten } from '../ui/depot.js';
 import { siedlungAnsicht, depotUnter } from '../render/siedlungen.js';
+import { signalAnsicht, lagerUnter } from '../render/signale.js';
+import { sichtbarJetzt } from '../render/nebel.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -41,7 +44,8 @@ export function mausEinrichten(canvas, spielHolen) {
     fundAnsicht.maus = { bx: ev.offsetX, by: ev.offsetY };
     // Eine Bildfolge hinterher — reicht, der Zeiger bewegt sich ja gerade.
     siedlungAnsicht.hover = fundAnsicht.hover ? -1 : depotUnter(ev.offsetX, ev.offsetY);
-    canvas.style.cursor = fundAnsicht.hover || aufKoloss(spielHolen(), ev.offsetX, ev.offsetY) || siedlungAnsicht.hover >= 0 ? 'pointer' : '';
+    signalAnsicht.hover = !fundAnsicht.hover && lagerSichtbarUnter(spielHolen(), ev.offsetX, ev.offsetY);
+    canvas.style.cursor = fundAnsicht.hover || aufKoloss(spielHolen(), ev.offsetX, ev.offsetY) || siedlungAnsicht.hover >= 0 || signalAnsicht.hover ? 'pointer' : '';
   });
   canvas.addEventListener('pointerleave', () => { fundAnsicht.maus = null; siedlungAnsicht.hover = -1; });
   canvas.addEventListener('pointerdown', (ev) => {
@@ -63,7 +67,13 @@ function klicken(spiel, bx, by) {
   if (!k) return;
   if (!m) {
     const depot = depotUnter(bx, by);
-    if (depot >= 0) depotUmschalten(depot);
+    // Lager der Überlebenden (M5b): einsteigen lassen, wenn es geht (Grund sonst in der Konsole).
+    if (lagerSichtbarUnter(spiel, bx, by)) {
+      /** @type {import('../sim/types.js').Befehl} */
+      const b = { art: 'RETTEN', spieler: v.spieler };
+      const grund = befehlPruefen(s, b);
+      if (grund === null) v.senden(b); else console.info(`[Retten] ${grund}`);
+    } else if (depot >= 0) depotUmschalten(depot);
     else if (aufKoloss(spiel, bx, by)) lagerUmschalten();
     return;
   }
@@ -80,6 +90,18 @@ function klicken(spiel, bx, by) {
   // trotzdem selbst — befehlPruefen ist dieselbe Funktion.
   if (befehlPruefen(s, b) === null) v.senden(b);
   else fundAnsicht.abgelehnt = performance.now();
+}
+
+/**
+ * Liegt der Bildpunkt auf dem Lager der Überlebenden — und sieht man es (nicht unter der Schneewehen-Decke)?
+ * @param {Spiel} spiel @param {number} bx @param {number} by
+ * @returns {boolean}
+ */
+function lagerSichtbarUnter(spiel, bx, by) {
+  const v = spiel.verbindung, s = v.zustand();
+  const o = lagerUnter(s, bx, by);
+  if (!o) return false;
+  return kolossVon(s, v.spieler) !== null && sichtbarJetzt(o.x, o.y);
 }
 
 /**

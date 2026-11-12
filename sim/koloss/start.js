@@ -44,10 +44,12 @@ export function kolossStartwerte(id, spieler, name, trupp, heimat = START_HEIMAT
     lager: { brennstoff: { kohle: START_KOHLE_KG, holz: START_HOLZ_KG, oel: 0 }, waren: { holz: 0, nahrung: START_NAHRUNG_KG } },
     holzZiel: BRENNSTOFFLAGER, trupp,
     // Crew (M4b): gesund, satt, zufrieden.
-    crew: { heizer: START_HEIZER, arbeiter: START_ARBEITER, satt: VOLL, gesundheit: VOLL, moral: VOLL, essenMg: 0, sterben: 0, tote: 0 },
+    crew: { heizer: START_HEIZER, arbeiter: START_ARBEITER, satt: VOLL, gesundheit: VOLL, moral: VOLL, essenMg: 0, sterben: 0, tote: 0, passagiere: 0 },
     // Liegenbleiben (M4c): Ticks ohne Brennstoff und Druck.
     kalt: 0,
     // Siedlung (M4d): Hier ist er zu Hause, hier beginnt er nach einem Wrack neu.
     heimat,
+    // Suchscheinwerfer (Spieltest M5b): aus.
+    sucher: 0,
   };
 }

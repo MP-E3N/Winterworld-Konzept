@@ -13,6 +13,10 @@
  *             ek.funde(m)       Fundstellen im Umkreis m (Standard 600 m) mit Abstand und Rest
  *             ek.ladung()       beide Lager des eigenen Kolosses (t)
  *             ek.replay()       Protokoll dieser Fahrt als JSON (für Fehlerberichte)
+ *             ek.wetter()       Wind, Sturm, Barometer, nächster Sturm in min (M5a)
+ *             ek.sturm(x)       Sturmschleier probehalber 0 … 1 (ek.sturm(null) = wieder echt)
+ *             ek.auftrag()      Rettungsauftrag: Fortschritt, Region, Lager (M5b — verrät die Lösung)
+ *             ek.nebel(an)      Schneewehen-Decke an/aus (nur Ansicht)
  *             ek.spielstand()   letzter Spielstand (gespeichert beim Halt in der Siedlung, M4d)
  *             ek.spielstandLoeschen()  Spielstand löschen (ek.neu() löscht ihn NICHT)
  *             ek.kamera, ek.spiel, ek.verbindung, ek.optik()
@@ -33,6 +37,10 @@ import { optikZahlen } from '../render/spuren.js';
 import { kachelZahlen } from '../render/welt.js';
 import { ansichtLicht } from '../render/licht.js';
 import { spielstandInfo, spielstandLoeschen } from '../game/speichern.js';
+import { ansichtSturm } from '../render/sturm.js';
+import { barometer } from '../sim/wetter/sturm.js';
+import { rettungsOrt, auftragErfuellt } from '../sim/auftrag.js';
+import { ansichtNebel } from '../render/nebel.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -80,6 +88,24 @@ export function konsoleEinrichten(spielHolen, neueWelt) {
       const t = (o) => Object.fromEntries(Object.entries(o).map(([w, kg]) => [w, kg / 1000]));
       return k ? { brennstoff: t(k.lager.brennstoff), waren: t(k.lager.waren) } : null;
     },
+    /** Sturmschleier probehalber zeigen (0 … 1), null = wieder nach dem echten Wetter (M5a, nur Darstellung).
+     * @param {number | null} [wert=0.8] */
+    sturm(wert = 0.8) { ansichtSturm.vorgabe = wert === null ? null : Math.max(0, Math.min(1, wert)); return ansichtSturm.vorgabe; },
+    /** Wetter in Klartext: Wind, Sturm jetzt, nächster Sturm in Minuten Spielzeit (M5a). */
+    wetter() {
+      const s = spielHolen().verbindung.zustand(), w = s.wetter, min = (/** @type {number} */ t) => Math.round(t / 120) / 10;
+      return {
+        windMs: w.windStaerke / 10, sturmJetzt: w.sturm, barometer: barometer(w, s.tick),
+        naechsterSturmInMin: w.sturmAb > s.tick ? min(w.sturmAb - s.tick) : 0, dauertMin: min(w.sturmBis - w.sturmAb), spitze: w.sturmSpitze,
+      };
+    },
+    /** Rettungsauftrag (M5b): Fortschritt, Region — und das Lager (verrät die Lösung, nur zum Testen). */
+    auftrag() {
+      const s = spielHolen().verbindung.zustand();
+      return { ...s.auftrag, erfuellt: auftragErfuellt(s), ...rettungsOrt(s.seed) };
+    },
+    /** Schneewehen-Decke an/aus (nur Darstellung, wie der Testknopf). @param {boolean} [an=false] */
+    nebel(an = false) { ansichtNebel.an = an; return an; },
     /** Letzter Spielstand (M4d): wann, Tick, Seed, Größe — oder null. */
     spielstand: spielstandInfo,
     /** Spielstand löschen; beim Neuladen beginnt eine neue Welt (bis zum nächsten Halt in der Siedlung). */

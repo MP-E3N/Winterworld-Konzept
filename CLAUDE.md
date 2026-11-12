@@ -78,5 +78,11 @@ Datei < 300 Zeilen (harte Grenze 400), Funktion < 50 Zeilen. Erst suchen, dann s
   `text.includes(neu)` prüfen, wenn der neue Text den alten enthält: Dann wird beim zweiten Lauf
   verdoppelt (Spieltest M4a: doppelte Imports und Konstanten in render/zeichnen.js und data/ansicht.js).
   Lange Skripte als Datei mit dem Write-Werkzeug anlegen — sehr lange Heredocs in Git-Bash scheitern.
+- **`createPattern` / Verläufe nicht jedes Bild neu anlegen, wenn sie gleich bleiben** (M5a: Sturmstreifen
+  kosteten +5 ms je Bild, mit zwischengespeichertem Muster + `setTransform` nur noch ~0,5 ms).
+- **Kein `willReadFrequently` auf Zeichenflächen, die jedes Bild gezeichnet werden** (M5b: die Nebel-Maske
+  lag dadurch im Hauptspeicher → +6 ms je Bild). Was man abfragen muss, lieber als eigene Liste halten.
+- **`.NET`-Dateizugriffe in PowerShell (`[IO.File]::…`) nutzen nicht das aktuelle Verzeichnis** — immer
+  absolute Pfade oder das Edit-Werkzeug (M5a-Spieltest: Skript lief ins Leere).
 - **Das Tempo dreht nicht mit dem Bug mit** (`sim/koloss/fahren.js` Schritt 5). Wer das „repariert“,
   macht Eis so griffig wie Schnee. Der Test „auf Eis folgt die Bewegung der Lenkung kaum“ fängt das.

@@ -7,9 +7,9 @@
 
 1. **Lesen:** `CLAUDE.md` (Regeln, Gelernte Regeln) → dieses Dokument → `PROJEKT.md` (Überblick)
    → bei Bedarf `KONZEPT.md` (Spielidee, Bauplan §10, Entscheidungen §11),
-   `docs/ENTSCHEIDUNGEN.md` (E-001…E-020), `docs/specs/` (M2, M3, M4a–d).
+   `docs/ENTSCHEIDUNGEN.md` (E-001…E-022), `docs/specs/` (M2, M3, M4a–d, M5a, M5b).
 2. **Prüfen:** `powershell -ExecutionPolicy Bypass -File tools\run-tests.ps1` → muss „ALLES GRUEN“
-   melden (95 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
+   melden (104 Tests). In frischen Fenstern fehlt evtl. Node im PATH (siehe Kronwege/CLAUDE.md).
 3. **Spielen:** Vorschau „eiskoloss“ starten (`.claude/launch.json`, Port 5176) →
    http://localhost:5176/. Steuerung hinter dem „?“. Konsole (F12): `ek.…`, z. B. `ek.neu(0)`
    = Testgelände, `ek.step(n)`, `ek.untergrund()`, `ek.kacheln()`, `ek.nacht(0.85)` (Dunkelheit vorgeben,
@@ -19,6 +19,94 @@
    `7792e31` HANDOFF · `f3aeea3` Spieltest M2b · `7e5c53e` M3 Fundstellen & Bergen · danach **M4a + Spieltest M4a** (siehe `git log`).
 5. **Spielstand:** Seit M4d lädt die Seite den letzten Stand aus dem Browser (gespeichert beim Halt in
    der Heimstatt). Frisch anfangen: `ek.spielstandLoeschen()` und neu laden. `ek.neu()` löscht ihn NICHT.
+
+## Stand 2026-11-11/12: Spieltest M5a + M5b Rettungsauftrag + Spieltest-Runden gebaut, committet und gepusht (107 Tests grün)
+
+**Spieltest M5a (Nutzer, 5 Punkte):**
+1. Windeffekte −50 % (Treibschnee `render/wind.js` 130 statt 260, Sturmstreifen `render/sturm.js` 75 statt 150).
+2. **Testknöpfe** unten rechts: „Sturm an/aus“ (Befehl `STURM_TEST`, `sturmTesten` in sim/wetter/sturm.js)
+   und „Nebel aus/an“ (nur Ansicht). Gehören nicht ins fertige Spiel (Klasse `testknopf`).
+3. **Feuer-Anzeige** (`ui/dampfmaschine.js`): links neben dem Zeiger Stufenname in Feuerfarbe und gemessener
+   Verbrauch in kg/min (`ui/verbrauch.js`, aus der Vorratsänderung), Zifferblatt glüht nach dem ECHTEN Feuer,
+   Feuertür lodert mit Flammenzungen; ohne Brennstoff „erloschen“, alles matt.
+4.+5. **M5b Rettungsauftrag** (Spec `docs/specs/M5b-rettung.md`, E-022, **Zustand v13, Replay neu**):
+   - Nutzerentscheidungen: Gesehenes **weht wieder zu**, Sicht **300 m**, Signalballon **ab ~1 km**,
+     heimbringen **ohne Zeitlimit**.
+   - **Sim** `sim/auftrag.js`: Region (800 m Kreis, 4,8–5,2 km, Richtung aus dem Seed) und Lager (≤ 550 m
+     von der Mitte, auf freiem Boden) aus dem Seed; `state.auftrag {leute, gesichtet, gerettet, verloren}`;
+     Befehl `RETTEN` (Stand, ≤ 60 m, nach freien Kojen, geschwächt: Gesundheit 50 %, Sattheit 20 %);
+     `crew.passagiere` essen mit, zählen bei Kojen; Ankunft in einer Siedlung = gerettet; Wrack = verloren.
+     Seed 0: festes Lager `TEST_LAGER` in data/auftrag.js. Fundstellen 10 % (Start 30 %). Generator 10 × 10 m.
+   - **Decke** `render/nebel.js` (+ `data/nebel.js`): Welt-Maske 1600² (10 m/Punkt, ±8 km), Sichtkreis
+     300 m (Nacht 110, Sturm ×0,35), Scheinwerfer 200 m, Zuwehen alle 5 s (~90 % nach 4 min), eigene Spur
+     12 min als 50 m breiter Streifen. Farbe kühl grau-blau (#c9d3de), damit man sie vom Schnee unterscheidet.
+     Fundstellen/Lager nur anklickbar im Sichtkreis oder auf der Spur. Gemessen: kaum Mehrkosten (nachdem
+     `willReadFrequently` raus ist — vorher +6 ms!).
+   - **Signale** `render/signale.js`: Ballon über der Heimstatt immer, über dem Lager ab gesichtet;
+     außerhalb des Bildes Messing-Randmarke mit Name + Entfernung (Rahmen lässt HUD und Meldung frei);
+     roter gestrichelter Regionskreis „Notsignal“; Lager (Zelte, Feuer, Leute) am Boden unter der Decke.
+   - **Anzeige** `ui/wegweiser.js` (aus anzeige.js ausgelagert): ⌂ Heimstatt + ✚ Region/Lager/an Bord/
+     gerettet mit Pfeil; Meldungen Notsignal / Signalballon gesichtet / an Bord / Auftrag erfüllt.
+     Crew-Zeile zeigt „x Gerettete“. Klick aufs Lager = RETTEN. Konsole `ek.auftrag()`, `ek.nebel(an)`.
+   - Im Browser geprüft: Start (Meldung, Ballon, Randmarken), Fernansicht (alles verdeckt), Sichten,
+     Retten per Klick, Heimkehr → „Auftrag erfüllt“, Nacht; keine Konsolenfehler. Test-Spielstand gelöscht.
+
+**Spieltest M5b, Punkt 1 (Nutzer-Bild, Nacht/Fernansicht):** Ballon bekommt ein Leuchtfeuer mit Bloom —
+`leuchten()` in `render/signale.js`: vorgerenderter Lichthof (128 px), additiv (`lighter`) gemalt, pulsiert;
+großer Hof um den Brenner unter der Hülle (nachts 80 px, bei Tag dezent), Hülle nur unten angestrahlt (Farbe
+bleibt erkennbar — erster Versuch wusch sie weiß aus), heller Kern = Flamme. Randmarken leuchten leicht mit.
+
+**Spieltest M5b, Runde 2 (Nutzer-Bild Nacht + Sturm, 4 Punkte) — Zustand v14, Replay neu, 107 Tests:**
+1. **Suchscheinwerfer** (Taste F, Knopf „Suchlicht“): `k.sucher` im Zustand (Befehl `SUCHER`), Richtung NUR
+   Darstellung — schwenkt mit 120°/s zur Maus (`render/sucher.js`). Kegel ±5°, 650 m; schneidet Decke (auch
+   in die Maske = bleibt gesehen), Sturmschleier und Nacht auf. Im Mehrspieler müsste die Richtung ein Befehl werden.
+2. **Nebel statt Reiskörner** (`render/nebel.js`): nahtloses Rauschen (4 Oktaven, einmal berechnet) in zwei
+   Weltgrößen (Zweierpotenzen), stufenlos überblendet, so dass eine Kachel immer ~520 px groß ist (`SCHWADEN_PX`);
+   zieht mit 35 % des Windes. Kein Wehen-Muster mehr.
+3. **Spuren verschwinden** (`render/spuren.js`: Zeit je Spurpunkt, 3 Altersstufen, weg nach 6 min wie der Dreck);
+   die frei gehaltene Spur in der Decke ist entfernt. **Laternen** (Taste G, Knopf „Laterne · x/5“): Befehl
+   `LATERNE`, `state.laternen` (`sim/laternen.js`, `data/laternen.js`): 24 m hinter dem Heck, brennen 2 h
+   echte Zeit (144000 Ticks), max. 5 je Spieler — die sechste löscht die älteste; halten 70 m Decke frei,
+   erhellen die Nacht, warmer Lichthof über allem (`render/laternen.js`), flackern kurz vor dem Erlöschen.
+4. **Frontlicht beleuchtet statt wegblenden** (`render/licht.js`): Schimmer nur 6 % (Tag) … 16 % (Nacht) statt
+   bis 66 %, Nacht wird im Kegel nur zu 72 % aufgehoben (`LICHT_AUFHELLUNG`), alle Kegel mit weichen Rändern
+   (`weicherKegel`, 5 Lagen), Reichweite 85 → 130 m.
+- Randmarken lassen links 380 px frei (linke Tafel ist breiter als gedacht).
+- Gemessen (versteckte Vorschau): Nacht + Sturm + Licht + Sucher + Laterne ≈ 2 ms je Bild nach dem Aufwärmen.
+
+### Nächster Schritt
+1. **Spieltest** des Szenarios: Reicht der Brennstoff für 2 × 5 km bei knappen Fundstellen (Start 4 t Kohle
+   + 1 t Holz)? Ist die Decke zu dicht/zu locker? Bilder/s?
+2. Committet und gepusht auf Nutzerwunsch („comitte und pusch das“, 2026-11-12), siehe `git log`.
+   Pflege offen: `render/spuren.js` hat 304 Zeilen (Richtwert 300).
+3. Danach M5c Reichweiten-Ring / M5d weitere Siedlungen + Aufträge — oder was der Spieltest ergibt.
+
+## Stand 2026-11-11: M5a Schneestürme gebaut (mit M5b committet, 99 Tests grün)
+
+M5 in Teilen (Nutzerwahl): **M5a Stürme** → M5b Überlebende/Entscheidungen → M5c Reichweiten-Ring →
+M5d weitere Siedlungen + Aufträge. Spec `docs/specs/M5a-stuerme.md`, Entscheidung E-021,
+**Zustand v12, Replay neu aufgenommen** (neue Wetterfelder, Sturm im Zufall).
+Nutzerentscheidungen: Sturm = **schlechte Sicht + langsamer fahren** (nicht kälter, Bergen erlaubt),
+Vorwarnung per **Barometer**, **kein Schutzort**.
+- **Sim** `sim/wetter/sturm.js` (Tick nach dem Wind): Plan `wetter.sturmAb/sturmBis/sturmSpitze`, Stärke
+  `wetter.sturm` 0 … 1000 (40 s an-/abschwellen); erster nach 8–14 min, dann alle 15–30 min, 3–6 min
+  lang (Werte `data/wetter.js`). `barometer(w, tick)` fällt 4 min vorher. `widerstandImSturm` → in
+  `fahren.js` (Widerstand bis +100 %, Höchsttempo ~halb). Wind im Zustand unverändert (keine Extra-Kälte).
+- **Darstellung** `render/sturm.js`: graue Front am Luv-Rand während der Vorwarnung, Schleier mit Sichtkreis
+  (240 → 55 m) und Scheinwerfer-Schnitten, bläulich-graue Schneestreifen als verschobenes Muster;
+  Ebene halbe Auflösung, vor der Dunkelheit. Gemessen ~0,5–1 ms Mehrkosten je Bild (nachdem
+  `createPattern` zwischengespeichert ist — vorher +5 ms!).
+- **Anzeige** `ui/barometer.js` unten rechts über der Uhr (Sturm · Veränderlich · Schön). Hilfe-Absatz,
+  F3-Zeile „Sturm“, Konsole `ek.wetter()` (nächster Sturm in min), `ek.sturm(x)` (Schleier probehalber).
+- Tests `tests/sturm.test.js` (4). Im Browser geprüft: Barometer fällt, Sturm bei Tag und Nacht,
+  keine Konsolenfehler. Test-Spielstand gelöscht.
+- Hinweis: Die Sturmfront am Bildrand ist nachts kaum zu sehen (unter der Dunkelheit) — dann zählt das Barometer.
+
+### Nächster Schritt
+1. **Spieltest M5a:** Wirkt der Sturm (Sicht, Tempo)? Zu häufig/zu selten? Bilder/s im Sturm?
+   Zum schnellen Testen: Tempo 4× (T) und `ek.wetter()`.
+2. Nach Freigabe committen (Replay neu, v12).
+3. Danach **M5b Überlebende + Entscheidungen** — Spec zuerst, Fragen an den Nutzer.
 
 ## Stand 2026-11-11: M4d Heimstatt gebaut und committet (95 Tests grün, Depot-Fenster vom Nutzer freigegeben)
 

@@ -18,6 +18,7 @@ import { ladungKg } from '../sim/koloss/lager.js';
 import { uhrzeit, tagNummer, dunkelheit } from '../sim/wetter/tag.js';
 import { optikZahlen } from '../render/spuren.js';
 import { siedlungVon, siedlungImStand } from '../sim/siedlung.js';
+import { barometer } from '../sim/wetter/sturm.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -72,6 +73,8 @@ export function overlayAktualisieren(el, spiel, dtMs) {
     k ? `Crew      Heizer ${k.crew.heizer}  Arbeiter ${k.crew.arbeiter}  satt ${(k.crew.satt / 10000).toFixed(1)} %  gesund ${(k.crew.gesundheit / 10000).toFixed(1)} %  Moral ${(k.crew.moral / 10000).toFixed(1)} %  Tote ${k.crew.tote}  Vorräte ${k.lager.waren.nahrung} kg` : '',
     k ? `Wrack     kalt ${k.kalt} Ticks  Wracks ${s.wracks.length}` : '',
     k ? `Siedlung  Heimat ${k.heimat}  drin ${siedlungVon(k)}  im Stand ${siedlungImStand(k)}  Depots ${s.depots.length}` : '',
+    `Sturm     Stärke ${s.wetter.sturm}  Barometer ${barometer(s.wetter, s.tick)}  ab ${s.wetter.sturmAb} bis ${s.wetter.sturmBis} (Spitze ${s.wetter.sturmSpitze})`,
+    `Auftrag   warten ${s.auftrag.leute}  gesichtet ${s.auftrag.gesichtet}  gerettet ${s.auftrag.gerettet}  verloren ${s.auftrag.verloren}${k ? `  an Bord ${k.crew.passagiere}` : ''}`,
     `Uhr       Tag ${tagNummer(s.tick)}  ${Math.floor(uhrzeit(s.tick) / 60)}:${String(uhrzeit(s.tick) % 60).padStart(2, '0')}  Dunkel ${dunkelheit(s.tick)}`,
     `Befehle   ${v.protokoll().length} aufgezeichnet`,
   ].join('\n');

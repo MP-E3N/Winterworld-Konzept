@@ -32,7 +32,7 @@ import { VOLL } from './crew.js';
 /**
  * Die Siedlungen der Welt. Index = Siedlungs-ID (k.heimat, depot.siedlung).
  * Heimstatt: Mitte 60 m hinter dem Startpunkt; der Koloss parkt am Nordrand, Ausfahrt nach Norden frei.
- * Hütten im Halbrund nach Süden, Windschutz dahinter, Depot-Schuppen rechts, Wärmeofen in der Mitte.
+ * Hütten im Halbrund nach Süden, Windschutz dahinter, Depot-Schuppen rechts, Generator in der Mitte.
  * WARUM feste Zahlen statt Kreisformel: Daten bleiben auf jedem Rechner gleich (kein Math.cos).
  * @type {readonly Siedlung[]}
  */
@@ -41,7 +41,8 @@ export const SIEDLUNGEN = [
     name: 'Heimstatt', x: 0, y: 60,
     park: { x: START_X, y: START_Y, h: START_RICHTUNG },
     gebaeude: [
-      { art: 'ofen', dx: 0, dy: 4, b: 6, t: 6 },
+      // Der Generator (M5b: „Stadt, in der ein Generator noch funktioniert“) — hält die Stadt warm.
+      { art: 'ofen', dx: 0, dy: 4, b: 10, t: 10 },
       { art: 'depot', dx: 27, dy: -12, b: 15, t: 9 },
       { art: 'huette', dx: 31, dy: 14, b: 10, t: 7 },
       { art: 'huette', dx: 22, dy: 27, b: 9, t: 7 },

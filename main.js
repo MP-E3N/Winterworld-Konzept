@@ -11,6 +11,8 @@
 
 import { lokaleVerbindungErstellen, lokaleVerbindungLaden } from './netz/lokal.js';
 import { spielstandLaden, autoSpeichern, autoZuruecksetzen } from './game/speichern.js';
+import { sturmLaeuft } from './sim/wetter/sturm.js';
+import { nebelZuruecksetzen } from './render/nebel.js';
 import { spielErstellen, bildSchritt } from './game/spiel.js';
 import { kamera, kameraEinrichten } from './render/kamera.js';
 import { bildZeichnen } from './render/zeichnen.js';
@@ -19,6 +21,7 @@ import { schneetreibenZuruecksetzen } from './render/wind.js';
 import { weltZuruecksetzen } from './render/welt.js';
 import {
   tastaturEinrichten, steuerungSenden, tastaturZuruecksetzen, telegrafSetzen, lichtUmschalten, brennstoffWaehlen, heizungUmschalten,
+  sucherUmschalten, laterneAbsetzen,
 } from './eingabe/tastatur.js';
 import { lagerEinrichten, lagerAktualisieren } from './ui/lager.js';
 import { depotEinrichten, depotAktualisieren } from './ui/depot.js';
@@ -55,6 +58,7 @@ function neueWelt(seed) {
   fundstellenZuruecksetzen();
   tastaturZuruecksetzen();
   autoZuruecksetzen();
+  nebelZuruecksetzen();
   kamera.folgen = true;
   kamera.zoomZiel = ZOOM_START;
 }
@@ -85,6 +89,13 @@ anzeigeAufbauen(hud, {
   licht: () => lichtUmschalten(spiel),
   heizung: () => heizungUmschalten(spiel),
   brennstoff: (wahl) => brennstoffWaehlen(spiel, wahl),
+  sucher: () => sucherUmschalten(spiel),
+  laterne: () => laterneAbsetzen(spiel),
+  // Testknopf (Spieltest M5a): Sturm sofort an bzw. aus.
+  sturm: () => {
+    const v = spiel.verbindung, s = v.zustand();
+    v.senden({ art: 'STURM_TEST', spieler: v.spieler, an: !sturmLaeuft(s.wetter, s.tick) });
+  },
 });
 lagerEinrichten(hud, () => spiel);
 depotEinrichten(hud, () => spiel);

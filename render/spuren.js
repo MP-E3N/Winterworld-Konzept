@@ -44,6 +44,7 @@ const ABDRUCK_LAENGE_M = 2.2;
  * @property {number[]} links  [x0, y0, x1, y1, …]
  * @property {number[]} rechts
  * @property {number[]} mitte  [x0, y0, …] Mittellinie der gepflügten Bahn (= Drehpunkt)
+ * @property {number[]} zeit   je Spurpunkt die Optik-Uhr (ms) — zum Verblassen
  * @property {number} lx @property {number} ly  letzter Spurpunkt
  * @property {number} weg  gefahrene Meter bis zum letzten Spurpunkt
  * @property {number} wegJetzt  gefahrene Meter inkl. Reststück (für Räder und Dampfmaschine)
@@ -58,6 +59,12 @@ const ABDRUCK_LAENGE_M = 2.2;
 
 /** @type {OptikJeKoloss[]} */
 const jeKoloss = [];
+/** Optik-Uhr (ms Spielzeit, steht bei Pause) — wie alt ein Spurpunkt ist. */
+let uhrMs = 0;
+/** Spuren verblassen wie der Dreck und sind nach so langer Spielzeit ganz weg (Spieltest M5b: 6 min). */
+const SPUR_DAUER_MS = 360000;
+/** In so vielen Stufen verblassen sie (je Stufe ein Zeichenvorgang). */
+const SPUR_STUFEN = 3;
 
 /** Löscht alles (neue Welt). */
 export function optikZuruecksetzen() {
@@ -82,7 +89,7 @@ export function optikZuruecksetzen() {
 export function optikAktualisieren(id, lage, schornstein, staerke, druckAnteil, wind, dtMs, rumpf) {
   let o = jeKoloss[id];
   if (!o) {
-    o = jeKoloss[id] = { links: [], rechts: [], mitte: [], lx: lage.x, ly: lage.y, weg: 0, wegJetzt: 0, takt: 0,
+    o = jeKoloss[id] = { links: [], rechts: [], mitte: [], zeit: [], lx: lage.x, ly: lage.y, weg: 0, wegJetzt: 0, takt: 0,
       rauch: { rest: 0 }, neben: NEBEN_SCHORNSTEINE.map(() => ({ rest: 0 })), schlackeRest: 0,
       funkenRest: 0, flockenRest: 0, px: rumpf.x, py: rumpf.y, fahrt: { vx: 0, vy: 0 } };
   }
@@ -114,6 +121,14 @@ export function optikAktualisieren(id, lage, schornstein, staerke, druckAnteil, 
  * @param {number} dtMs
  */
 export function optikBewegen(wind, dtMs) {
+  uhrMs += dtMs;
+  for (const o of jeKoloss) {
+    if (!o) continue;
+    // Zu alte Spurpunkte fallen vorn weg (Spieltest M5b: Spuren verschwinden mit der Zeit).
+    let weg = 0;
+    while (weg < o.zeit.length && uhrMs - o.zeit[weg] > SPUR_DAUER_MS) weg += 1;
+    if (weg > 0) { o.zeit.splice(0, weg); o.links.splice(0, weg * 2); o.rechts.splice(0, weg * 2); o.mitte.splice(0, weg * 2); }
+  }
   rauchBewegen(wind, dtMs, (x, y, r, a) => schmutzAblegen('russfeld', x, y, r, a));
   funkenBewegen(wind, dtMs);
   schmutzAltern(dtMs);
@@ -142,7 +157,8 @@ function spurPunkt(o, lage, d) {
   o.links.push(lage.x + sin * SPUR_MITTE_M, lage.y - cos * SPUR_MITTE_M);
   o.rechts.push(lage.x - sin * SPUR_MITTE_M, lage.y + cos * SPUR_MITTE_M);
   o.mitte.push(lage.x, lage.y);
-  if (o.mitte.length > SPUR_MAX * 2) { o.links.splice(0, 2); o.rechts.splice(0, 2); o.mitte.splice(0, 2); }
+  o.zeit.push(uhrMs);
+  if (o.mitte.length > SPUR_MAX * 2) { o.links.splice(0, 2); o.rechts.splice(0, 2); o.mitte.splice(0, 2); o.zeit.splice(0, 1); }
   for (const a of ABDRUCK) {
     for (const seite of [-1, 1]) {
       const nr = Math.floor(Math.random() * varianten('abdruck') * 2);
@@ -169,14 +185,36 @@ export function spurenZeichnen(ctx) {
   ]) {
     ctx.strokeStyle = bahn.farbe;
     ctx.lineWidth = Math.max(2, bahn.breite * kamera.zoom);
-    for (const o of jeKoloss) if (o) linieZeichnen(ctx, o.mitte, ctx.lineWidth);
+    for (const o of jeKoloss) if (o) verblassend(ctx, o, o.mitte);
   }
   // Dann je Seite die gepresste Spur.
   ctx.strokeStyle = 'rgba(140, 155, 174, 0.22)';
   ctx.lineWidth = Math.max(1.5, SPUR_BREITE_M * kamera.zoom);
   for (const o of jeKoloss) {
     if (!o) continue;
-    for (const liste of [o.links, o.rechts]) linieZeichnen(ctx, liste, ctx.lineWidth);
+    for (const liste of [o.links, o.rechts]) verblassend(ctx, o, liste);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Eine Spurlinie in Altersstufen: alt = blass, neu = kräftig (Spieltest M5b: Spuren verschwinden mit der Zeit).
+ * @param {CanvasRenderingContext2D} ctx @param {OptikJeKoloss} o @param {number[]} liste
+ */
+function verblassend(ctx, o, liste) {
+  let von = 0;
+  for (let stufe = 0; stufe < SPUR_STUFEN; stufe++) {
+    // Bis zu welchem Punkt reicht diese Altersstufe? (Zeiten sind aufsteigend.)
+    const grenze = uhrMs - SPUR_DAUER_MS * (1 - (stufe + 1) / SPUR_STUFEN);
+    let bis = von;
+    while (bis < o.zeit.length && o.zeit[bis] < grenze) bis += 1;
+    if (stufe === SPUR_STUFEN - 1) bis = o.zeit.length;
+    if (bis - von >= 1) {
+      ctx.globalAlpha = (stufe + 1) / SPUR_STUFEN;
+      // Einen Punkt überlappen, damit zwischen den Stufen keine Lücke entsteht.
+      linieZeichnen(ctx, liste, ctx.lineWidth, Math.max(0, von - 1) * 2, bis * 2);
+    }
+    von = bis;
   }
 }
 
@@ -186,17 +224,18 @@ export function spurenZeichnen(ctx) {
  * liegt (Spieltest M2b: Bildrate). Unsichtbare Abschnitte werden übersprungen.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number[]} liste @param {number} breitePx  Strichbreite (für den Sichtrand)
+ * @param {number} [von]  erster Index (gerade Zahl) @param {number} [bis]  Ende (ausschließlich)
  */
-function linieZeichnen(ctx, liste, breitePx) {
+function linieZeichnen(ctx, liste, breitePx, von = 0, bis = liste.length) {
   const rand = breitePx + 2;
   ctx.beginPath();
   let offen = false, vorherDrin = false, vx = 0, vy = 0;
-  for (let i = 0; i < liste.length; i += 2) {
+  for (let i = von; i < bis; i += 2) {
     const [bx, by] = weltZuBild(liste[i], liste[i + 1]);
     const drin = bx > -rand && by > -rand && bx < kamera.breite + rand && by < kamera.hoehe + rand;
     if (drin || vorherDrin) {
       // Den letzten Punkt vor dem Eintritt mitnehmen, damit die Linie bis zum Rand reicht.
-      if (!offen) { ctx.moveTo(i > 0 && !vorherDrin ? vx : bx, i > 0 && !vorherDrin ? vy : by); offen = true; }
+      if (!offen) { ctx.moveTo(i > von && !vorherDrin ? vx : bx, i > von && !vorherDrin ? vy : by); offen = true; }
       ctx.lineTo(bx, by);
     } else {
       offen = false;

@@ -161,6 +161,39 @@ In der Siedlung isst die Crew dort (Bordvorräte bleiben), heilt in ~4 min, niem
 Speichern liegt in `game/` (liest nur): beim Eintreffen, nach jedem Befehl dort, sonst alle 20 s;
 geladen wird nur ein Stand derselben Zustandsversion. Kein Rauch aus den Hütten (Leistung).
 Zustand v11, Replay neu.
+Nachtrag Spieltest: Umladen über ein eigenes Depot-Fenster am Schuppen (Abladen/Beladen, 1 t · 10 t · Alle),
+nicht über das Lager-Popup (Nutzerwunsch „intuitiver“).
+
+## E-021 Stürme: weltweiter Plan im Zustand, Schneelast über den Widerstand, Sicht nur Darstellung (2026-11-11, M5a)
+M5 in Teilen: M5a Stürme, M5b Überlebende/Entscheidungen, M5c Reichweiten-Ring, M5d Siedlungen + Aufträge.
+Nutzerentscheidungen M5a: Wirkung = schlechte Sicht + langsamer fahren (NICHT kälter, Bergen bleibt),
+Vorwarnung über ein Barometer (kein Warntext), kein Schutzort (durchhalten).
+Der Sturm ist weltweit und vorab geplant (`wetter.sturmAb/sturmBis/sturmSpitze`, gewürfelt mit dem
+Zustands-Zufall) — nur so kann das Barometer Minuten vorher fallen, und alle Rechner sehen denselben Sturm.
+Der Wind im Zustand bleibt unverändert, sonst würde es über die Windkälte kälter. Bremsen = Widerstand
+bis +100 % (Höchsttempo etwa halb; langsame Stellungen hält die Maschine mit mehr Dampf).
+Sicht ist reine Darstellung (eine Ebene in halber Auflösung, Streifen als zwischengespeichertes Muster:
+gemessen ~0,5–1 ms je Bild). Zustand v12, Replay neu.
+Spieltest M5a: Windeffekte halbiert (Treibschnee 130 statt 260, Sturmstreifen 75 statt 150), Testknopf
+„Sturm an/aus“ über den Befehl STURM_TEST (später für den Server sperren), Feuer-Anzeige mit Stufenname,
+gemessenem Verbrauch (kg/min) und Glut nach dem echten Feuer.
+
+## E-022 Rettungsauftrag: Ort aus dem Seed, Schneewehen nur als Darstellung (2026-11-11, M5b)
+Nutzerwunsch: Von Überlebenden-Städten aus erkunden, Karte überwiegend verdeckt, Signalballons als
+Wegweiser, Rohstoffe viel knapper; Szenario: Start in der Stadt mit Generator, Überlebende ~5 km entfernt,
+nur die Region bekannt. Nutzerentscheidungen: Gesehenes weht wieder zu, Sicht 300 m, Ballon ab ~1 km,
+heimbringen ohne Zeitlimit.
+Region und Lager folgen aus dem Seed (wie Fundstellen); im Zustand nur der Fortschritt (`state.auftrag`)
+und `crew.passagiere`. Die Decke ist NUR Darstellung (Welt-Maske 10 m/Punkt, ±8 km, Zuwehen in festen
+Schritten nach Spielzeit) — für den Mehrspieler-Server (M6) muss die Sicht später serverseitig geprüft
+werden (KONZEPT §8). Die Maske wird nie ausgelesen (`willReadFrequently` kostete +6 ms je Bild); anklickbar
+ist, was im Sichtkreis oder auf der eigenen Spur liegt. Fundstellen 10 % statt 30 % (am Start 30 % statt 65 %).
+Zustand v13, Replay neu.
+Spieltest-Nachtrag (Zustand v14): Die frei gehaltene eigene Spur ist entfernt (Nutzer: Spuren sollen wie
+alles verschwinden), dafür Laternen im Zustand (Befehl LATERNE, max. 5, 2 h). Suchscheinwerfer: an/aus im
+Zustand, Richtung nur Darstellung (folgt der Maus) — für M6 als Befehl nachziehen. Licht hebt die Nacht nur
+zu 72 % auf und hat weiche Ränder (vorher harte, reinweiße Kegel = „blendet weg“). Nebel = weiches Rauschen
+mit Zoom-Überblendung statt eines festen Musters („Reiskörner“).
 
 ## E-007 Testgelände in M1 (2026-11-10)
 Vier feste Kreise (Eis, Pulverschnee) in `data/testgelaende.js`, damit das Fahrgefühl auf

@@ -60,7 +60,9 @@ test('Fundstellen: gleicher Seed ergibt dieselben Fundstellen, die ID führt zur
   gleich(fundstelleMitId(4711, -1), null, 'ID −1');
 });
 
-test('Fundstellen: nur auf Schnee, nie am Startpunkt, und in Startnähe gibt es immer welche (20 Seeds)', () => {
+test('Fundstellen: nur auf Schnee, nie am Startpunkt, in Startnähe meist welche — aber knapp (20 Seeds)', () => {
+  // M5b (Nutzerwunsch „Rohstoffe viel weniger“): Nicht mehr in jeder Welt liegt etwas am Start.
+  let mitFund = 0, gesamt = 0;
   for (let seed = 1; seed <= 20; seed++) {
     const liste = funde(seed, 1000);
     for (const f of liste) {
@@ -71,8 +73,11 @@ test('Fundstellen: nur auf Schnee, nie am Startpunkt, und in Startnähe gibt es 
       gleich(f.menge % FUNDARTEN[f.art].stueckKg, 0, 'Menge ist ganze Stücke');
     }
     const nah = liste.filter((f) => Math.hypot(f.x / M, f.y / M) < 450);
-    pruefe(nah.length >= 2, `Seed ${seed}: nur ${nah.length} Fundstellen in 450 m`);
+    if (nah.length > 0) mitFund += 1;
+    gesamt += nah.length;
   }
+  pruefe(mitFund >= 14, `nur ${mitFund} von 20 Welten haben eine Fundstelle in 450 m`);
+  pruefe(gesamt <= 20 * 6, `zu viele Fundstellen am Start: ${gesamt} in 20 Welten`);
 });
 
 test('Fundstellen: Öl liegt nie näher als 1,5 km, weiter draußen gibt es welches', () => {

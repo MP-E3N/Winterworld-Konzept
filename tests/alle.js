@@ -18,6 +18,9 @@ import './lager.test.js';
 import './crew.test.js';
 import './wrack.test.js';
 import './siedlung.test.js';
+import './sturm.test.js';
+import './auftrag.test.js';
+import './laternen.test.js';
 import './determinismus.test.js';
 import './regeln.test.js';
 

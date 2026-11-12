@@ -69,10 +69,10 @@ export const VORRATSLAGER = 3;
 export const FUND_ZELLE_M = 200;
 /** Abstand der Fundstelle vom Zellrand (m) — so berühren sich Nachbarn nie. */
 export const FUND_RAND_M = 30;
-/** Chance (Prozent) auf eine Fundstelle je Zelle … */
-export const FUND_CHANCE = 30;
-/** … und rund um den Start (bis START_FUND_M), damit man gleich etwas findet. */
-export const FUND_CHANCE_START = 65;
+/** Chance (Prozent) auf eine Fundstelle je Zelle … (M5b, Nutzerwunsch „Rohstoffe viel weniger“: vorher 30) */
+export const FUND_CHANCE = 10;
+/** … und rund um den Start (bis START_FUND_M), damit man gleich etwas findet (vorher 65). */
+export const FUND_CHANCE_START = 30;
 export const START_FUND_M = 450;
 /** So nah am Startpunkt liegt nie eine Fundstelle (dort steht der Koloss). */
 export const START_ABSTAND_M = 45;

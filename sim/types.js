@@ -38,6 +38,12 @@
  * @property {Crew} crew        Mannschaft an Bord (M4b)
  * @property {number} kalt      Ticks ohne Brennstoff an Bord und ohne Druck (Gnadenfrist bis zum Liegenbleiben, M4c)
  * @property {number} heimat    zuletzt besuchte Siedlung (Index in data/siedlungen.js SIEDLUNGEN, M4d) — Neustart dort
+ * @property {number} sucher    Suchscheinwerfer: 1 = an, 0 = aus (Spieltest M5b; wohin er zeigt, ist nur Darstellung)
+ */
+
+/**
+ * Gesetzte Laterne (Spieltest M5b): temporärer Wegpunkt. Index = ID; erloschene bleiben stehen (bis ≤ tick).
+ * @typedef {{id: number, spieler: number, x: number, y: number, ab: number, bis: number}} Laterne  x, y in µm, ab/bis = Ticks
  */
 
 /**
@@ -58,6 +64,16 @@
  * @property {number} essenMg     angefangenes kg Vorräte (Milligramm)
  * @property {number} sterben     Sammler bis zum nächsten Todesfall
  * @property {number} tote        Zahl der Toten bisher
+ * @property {number} passagiere  Gerettete an Bord (M5b): essen mit, brauchen Kojen, arbeiten nicht
+ */
+
+/**
+ * Fortschritt des Rettungsauftrags (M5b). Wo Region und Lager liegen, folgt aus dem Seed (sim/auftrag.js).
+ * @typedef {Object} Auftrag
+ * @property {number} leute      Überlebende, die noch im Lager warten
+ * @property {number} gesichtet  1 = Signalballon ist aufgestiegen (ein Koloss war ≤ 1 km heran)
+ * @property {number} gerettet   in einer Siedlung angekommen
+ * @property {number} verloren   mit einem Wrack verloren
  */
 
 /**
@@ -106,6 +122,10 @@
  * @property {number} zielRichtung   dahin dreht er gerade
  * @property {number} zielStaerke
  * @property {number} naechsterWechsel  Tick, an dem ein neues Ziel gewürfelt wird
+ * @property {number} sturm          aktuelle Sturmstärke 0 … 1000 (M5a, sim/wetter/sturm.js)
+ * @property {number} sturmAb        Tick, an dem der nächste (oder laufende) Sturm beginnt
+ * @property {number} sturmBis       Tick, an dem er endet
+ * @property {number} sturmSpitze    höchste Stärke dieses Sturms
  */
 
 /**
@@ -123,6 +143,8 @@
  * @property {Abwurf[]} abwuerfe
  * @property {Wrack[]} wracks        liegengebliebene Kolosse (M4c, F6), Index = ID
  * @property {Depot[]} depots        Depots in Siedlungen je Spieler (M4d), Index = ID
+ * @property {Auftrag} auftrag       Rettungsauftrag (M5b)
+ * @property {Laterne[]} laternen    gesetzte Laternen (Spieltest M5b), Index = ID
  */
 
 /**
@@ -150,9 +172,13 @@
  * @typedef {{art: 'EINLAGERN', spieler: number, lager: number, ware: string, kg: number}} BefehlEinlagern  Koloss-Lager → Depot (M4d)
  * @typedef {{art: 'AUSLAGERN', spieler: number, lager: number, ware: string, kg: number}} BefehlAuslagern  Depot → Koloss-Lager
  * @typedef {{art: 'CREW', spieler: number, gruppe: 'heizer' | 'arbeiter', anzahl: number}} BefehlCrew  +1 anheuern, −1 absetzen
+ * @typedef {{art: 'STURM_TEST', spieler: number, an: boolean}} BefehlSturmTest  Test-Knopf: Sturm sofort an/aus (M5a)
+ * @typedef {{art: 'RETTEN', spieler: number}} BefehlRetten  Überlebende am Lager einsteigen lassen (M5b)
+ * @typedef {{art: 'SUCHER', spieler: number, an: boolean}} BefehlSucher  Suchscheinwerfer an/aus
+ * @typedef {{art: 'LATERNE', spieler: number}} BefehlLaterne  Laterne hinter dem Heck absetzen
  * @typedef {BefehlBeitreten | BefehlSteuern | BefehlDruck | BefehlTelegraf | BefehlLicht | BefehlBergenStart
  *   | BefehlBergenAbbrechen | BefehlBrennstoff | BefehlHeizung | BefehlAbwerfen | BefehlUmlagern | BefehlHolzziel
- *   | BefehlAufnehmen | BefehlEinlagern | BefehlAuslagern | BefehlCrew} Befehl
+ *   | BefehlAufnehmen | BefehlEinlagern | BefehlAuslagern | BefehlCrew | BefehlSturmTest | BefehlRetten | BefehlSucher | BefehlLaterne} Befehl
  */
 
 /**

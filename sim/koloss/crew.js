@@ -36,7 +36,8 @@ import { teile } from '../lib/winkel.js';
  */
 export function crewSchritt(k, state) {
   const c = k.crew;
-  const leute = c.heizer + c.arbeiter;
+  // Gerettete (M5b) essen mit und frieren mit, arbeiten aber nicht.
+  const leute = c.heizer + c.arbeiter + c.passagiere;
   if (leute > 0 && siedlungImStand(k) >= 0) {
     inDerSiedlung(c);
   } else if (leute > 0) {
@@ -107,7 +108,9 @@ function sterben(c) {
   c.sterben += STERBEN_UNTER - c.gesundheit;
   if (c.sterben < STERBEN_SCHWELLE) return;
   c.sterben -= STERBEN_SCHWELLE;
-  if (c.arbeiter >= c.heizer && c.arbeiter > 0) c.arbeiter -= 1;
+  // Aus der größten Gruppe (Gleichstand: Passagiere, dann Arbeiter, dann Heizer).
+  if (c.passagiere > 0 && c.passagiere >= c.arbeiter && c.passagiere >= c.heizer) c.passagiere -= 1;
+  else if (c.arbeiter >= c.heizer && c.arbeiter > 0) c.arbeiter -= 1;
   else if (c.heizer > 0) c.heizer -= 1;
   else return;
   c.tote += 1;

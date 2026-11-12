@@ -19,6 +19,7 @@ import { WAREN } from '../../data/fundstellen.js';
 import { rumpfMitte } from '../abfragen.js';
 import { kolossStartwerte } from './start.js';
 import { gesundeArbeiter } from './crew.js';
+import { verlorenBeimWrack } from '../auftrag.js';
 import { cosW, sinW, teile, winkelNorm, TRIG_EINS } from '../lib/winkel.js';
 
 /** @typedef {import('../types.js').Koloss} Koloss */
@@ -47,6 +48,7 @@ export function wrackMachen(state, k) {
   const m = rumpfMitte(k);
   state.wracks.push({ id: state.wracks.length, koloss: k.id, name: k.name, x: m.x, y: m.y, h: k.h, tick: state.tick });
   ladungAblegen(state, k, m);
+  verlorenBeimWrack(state, k); // Gerettete an Bord sind verloren (M5b)
   // Neustart: frischer Koloss in der Heimat (zuletzt besuchte Siedlung, M4d), gleiche ID, gleicher
   // Trupp (der wartet wieder an Bord). Das Depot dort bleibt.
   const neu = kolossStartwerte(k.id, k.besitzer, k.name, k.trupp, k.heimat);

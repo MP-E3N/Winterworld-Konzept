@@ -15,6 +15,7 @@
 import { SIEDLUNGEN, SIEDLUNG_RADIUS_M } from '../data/siedlungen.js';
 import { rumpfMitte, kolossSteht } from './abfragen.js';
 import { teile } from './lib/winkel.js';
+import { ankunft } from './auftrag.js';
 
 /** @typedef {import('./types.js').Koloss} Koloss */
 /** @typedef {import('./types.js').Zustand} Zustand */
@@ -90,12 +91,15 @@ export function parkplatz(siedlung) {
 // ── Tick ──
 
 /**
- * Hält der Koloss in einer Siedlung, wird sie seine Heimat (Neustart nach dem Wrack dort, F6).
- * @param {Koloss} k
+ * Hält der Koloss in einer Siedlung, wird sie seine Heimat (Neustart nach dem Wrack dort, F6), und
+ * Gerettete an Bord steigen aus (M5b).
+ * @param {Koloss} k @param {Zustand} state
  */
-export function siedlungSchritt(k) {
+export function siedlungSchritt(k, state) {
   const s = siedlungImStand(k);
-  if (s >= 0) k.heimat = s;
+  if (s < 0) return;
+  k.heimat = s;
+  ankunft(state, k);
 }
 
 // ── Depots ──

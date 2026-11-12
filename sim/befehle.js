@@ -20,6 +20,9 @@ import { istLagerBefehl, lagerBefehlPruefen, lagerBefehlAnwenden, ganzImBereich 
 import { istSiedlungsBefehl, siedlungsBefehlPruefen, siedlungsBefehlAnwenden } from './befehle-siedlung.js';
 import { START_ARBEITER } from '../data/crew.js';
 import { kolossStartwerte } from './koloss/start.js';
+import { sturmTesten } from './wetter/sturm.js';
+import { rettenPruefen, rettenAnwenden } from './auftrag.js';
+import { laterneSetzen } from './laternen.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 /** @typedef {import('./types.js').Befehl} Befehl */
@@ -61,7 +64,8 @@ export function befehlPruefen(state, b) {
     if (typeof b.an !== 'boolean') return 'an muss ja/nein sein';
     return null;
   }
-  if (b.art === 'HEIZUNG') {
+  if (b.art === 'LATERNE') return null;
+  if (b.art === 'HEIZUNG' || b.art === 'STURM_TEST' || b.art === 'SUCHER') {
     if (typeof b.an !== 'boolean') return 'an muss ja/nein sein';
     return null;
   }
@@ -71,6 +75,7 @@ export function befehlPruefen(state, b) {
     if (!ganzImBereich(b.wahl, 0, BRENNSTOFFE.length - 1)) return 'unbekannter Brennstoff';
     return null;
   }
+  if (b.art === 'RETTEN') return rettenPruefen(state, /** @type {import('./types.js').Koloss} */ (kolossVon(state, b.spieler)));
   return 'unbekannter Befehl';
 }
 
@@ -106,6 +111,14 @@ export function befehlAnwenden(state, b) {
     k.licht = b.an ? 1 : 0; // Ganzzahl im Zustand (CLAUDE.md Regel 3)
   } else if (b.art === 'HEIZUNG') {
     k.heizung = b.an ? 1 : 0;
+  } else if (b.art === 'SUCHER') {
+    k.sucher = b.an ? 1 : 0;
+  } else if (b.art === 'LATERNE') {
+    laterneSetzen(state, k, b.spieler);
+  } else if (b.art === 'RETTEN') {
+    rettenAnwenden(state, k);
+  } else if (b.art === 'STURM_TEST') {
+    sturmTesten(state, b.an); // Test-Knopf (Spieltest M5a); später für den Server sperren
   } else if (b.art === 'BRENNSTOFF') {
     k.brennstoff = b.wahl;
   } else if (istLagerBefehl(b)) {

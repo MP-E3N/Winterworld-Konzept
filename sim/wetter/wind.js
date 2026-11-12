@@ -19,6 +19,7 @@ import {
   WIND_MIN, WIND_MAX, WIND_WECHSEL_MIN, WIND_WECHSEL_MAX, WIND_DREHUNG_NORMAL, WIND_UMSCHWUNG_PROZENT,
   WIND_DREH_PRO_TICK, WIND_STAERKE_PRO_TICK,
 } from '../../data/wetter.js';
+import { ersterSturm } from './sturm.js';
 
 /** @typedef {import('../types.js').Zustand} Zustand */
 /** @typedef {import('../types.js').Wetter} Wetter */
@@ -31,9 +32,11 @@ import {
 export function startWetter(traeger) {
   const richtung = rngBereich(traeger, 0, 65535);
   const staerke = rngBereich(traeger, WIND_MIN + 20, WIND_MAX - 60);
+  const naechsterWechsel = rngBereich(traeger, WIND_WECHSEL_MIN, WIND_WECHSEL_MAX);
   return {
-    windRichtung: richtung, windStaerke: staerke, zielRichtung: richtung, zielStaerke: staerke,
-    naechsterWechsel: rngBereich(traeger, WIND_WECHSEL_MIN, WIND_WECHSEL_MAX),
+    windRichtung: richtung, windStaerke: staerke, zielRichtung: richtung, zielStaerke: staerke, naechsterWechsel,
+    // Den ersten Sturm gleich mit planen (M5a) — nach dem Wind gewürfelt, damit der Wind gleich bleibt.
+    ...ersterSturm(traeger),
   };
 }
 

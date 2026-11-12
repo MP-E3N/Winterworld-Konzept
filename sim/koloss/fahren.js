@@ -30,6 +30,7 @@ import { untergrundAn } from '../welt/untergrund.js';
 import { bewegenMitKollision } from './kollision.js';
 import { kesselSchub, kesselSchubRueckwaerts } from '../abfragen.js';
 import { schubMitLadung } from './lager.js';
+import { widerstandImSturm } from '../wetter/sturm.js';
 import { cosW, sinW, teile, winkelNorm, klemme, TRIG_EINS } from '../lib/winkel.js';
 
 /** @typedef {import('../types.js').Koloss} Koloss */
@@ -38,9 +39,11 @@ import { cosW, sinW, teile, winkelNorm, klemme, TRIG_EINS } from '../lib/winkel.
  * Ein Tick Fahrphysik für einen Koloss.
  * @param {Koloss} k
  * @param {number} seed  Welt-Seed (für Untergrund und Kollision)
+ * @param {number} [sturm]  Sturmstärke 0 … 1000 (M5a): Schneelast erhöht den Widerstand
  */
-export function fahrSchritt(k, seed) {
-  const u = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
+export function fahrSchritt(k, seed, sturm = 0) {
+  const boden = UNTERGRUND[untergrundAn(seed, k.x, k.y)];
+  const u = sturm > 0 ? { ...boden, widerstand: widerstandImSturm(boden.widerstand, sturm) } : boden;
   const c = cosW(k.h);
   const s = sinW(k.h);
 

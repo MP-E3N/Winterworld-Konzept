@@ -12,6 +12,7 @@
 import { rngAusSeed } from './lib/rng.js';
 import { startWetter } from './wetter/wind.js';
 import { ZUSTAND_VERSION } from '../data/takt.js';
+import { auftragStart } from './auftrag.js';
 
 /** @typedef {import('./types.js').Zustand} Zustand */
 
@@ -36,5 +37,7 @@ export function neuerZustand(seed) {
     abwuerfe: [],
     wracks: [],
     depots: [],
+    auftrag: auftragStart(),
+    laternen: [],
   };
 }

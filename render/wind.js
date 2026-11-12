@@ -44,7 +44,8 @@ export function windRelativ(w, hRad) {
 
 /** @type {{x: number, y: number, vx: number, vy: number, alter: number, dauer: number}[]} */
 const flocken = [];
-const FLOCKEN_MAX = 260;
+/** Höchstzahl Treibschnee-Striche (M5a-Spieltest: Windeffekte halbiert, vorher 260). */
+const FLOCKEN_MAX = 130;
 
 /**
  * Bewegt und erzeugt Schneetreiben im sichtbaren Bereich.
@@ -62,7 +63,7 @@ export function schneetreibenAktualisieren(w, dtMs) {
   if (kamera.zoom < 0.8 || dtMs <= 0) return;
   const v = windVektor(w);
   // Bei 1 m/s kaum Treiben, ab ~12 m/s volle Menge.
-  const ziel = Math.min(FLOCKEN_MAX, Math.round(v.ms * v.ms * 1.8));
+  const ziel = Math.min(FLOCKEN_MAX, Math.round(v.ms * v.ms * 0.9));
   const halbB = kamera.breite / 2 / kamera.zoom, halbH = kamera.hoehe / 2 / kamera.zoom;
   let neu = Math.min(ziel - flocken.length, Math.ceil(ziel * s * 1.2));
   while (neu-- > 0) {

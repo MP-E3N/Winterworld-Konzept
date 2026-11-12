@@ -2,7 +2,7 @@
 /**
  * anzeige.js — Anzeigen am Bildrand: Tempo, Dampfmaschine, Kesseldruck, Maschinentelegraf, Wind,
  *              Boden, Laderaum (M3), Crew (M4b), Meldung beim Liegenbleiben (M4c), Trupp, Brennstoff-Wahlschalter, Kälte, Uhr (M4a),
- *              Heimat + Speicher-Meldung (M4d), Maßstab.
+ *              Speicher-Meldung (M4d), Barometer (M5a), Maßstab; Heimat/Auftrag/Testknöpfe über ui/wegweiser.js (M5b).
  *
  * ZWECK:    Das Nötigste zum Fahren, schlicht (Nutzerwunsch aus Kronwege: keine Extra-Fenster,
  *           Bedienhinweise nur hinter „?“).
@@ -31,10 +31,10 @@ import { dampfmaschineEinrichten, dampfmaschineZeichnen } from './dampfmaschine.
 import { telegrafEinrichten, telegrafZeichnen } from './telegraf.js';
 import { lampeEinrichten, lampeZeichnen } from './lampe.js';
 import { speicherMeldung } from '../game/speichern.js';
-import { siedlungVon } from '../sim/siedlung.js';
-import { rumpfMitte } from '../sim/abfragen.js';
-import { SIEDLUNGEN } from '../data/siedlungen.js';
-import { UM_PRO_METER } from '../data/koloss.js';
+import { barometerEinrichten, barometerZeichnen } from './barometer.js';
+import { verbrauchKgMin } from './verbrauch.js';
+import { barometer } from '../sim/wetter/sturm.js';
+import { wegweiserHtml, wegweiserEinrichten, wegweiserAktualisieren, auftragMeldung } from './wegweiser.js';
 
 /** @typedef {import('../game/spiel.js').Spiel} Spiel */
 
@@ -48,13 +48,16 @@ let telegraf;
 let lampe;
 /** @type {HTMLCanvasElement} */
 let ofen;
+/** Barometer (M5a). @type {HTMLCanvasElement} */
+let baro;
 /** Knöpfe des Brennstoff-Wahlschalters (Index = Brennstoff). @type {HTMLElement[]} */
 let wahlknoepfe = [];
 
 /**
  * Baut die Anzeige einmal auf.
  * @param {HTMLElement} hud
- * @param {{telegraf: (stufe: number) => void, licht: () => void, heizung: () => void, brennstoff: (wahl: number) => void}} aktionen  aus eingabe/tastatur.js
+ * @param {{telegraf: (stufe: number) => void, licht: () => void, heizung: () => void, brennstoff: (wahl: number) => void, sturm: () => void,
+ *          sucher: () => void, laterne: () => void}} aktionen  aus eingabe/tastatur.js (sturm: Testknopf, main.js)
  */
 export function anzeigeAufbauen(hud, aktionen) {
   hud.innerHTML = `
@@ -83,12 +86,11 @@ export function anzeigeAufbauen(hud, aktionen) {
         <span class="mini" title="Moral — wird noch nur angezeigt"><small>Moral</small><span class="minibalken"><span id="a-moral" class="moral"></span></span></span></div>
       <div class="zeile"><span class="beschr">Trupp</span><span id="a-trupp"></span></div>
     </div>
-    <div class="tafel rechts-unten"><div id="a-uhr" class="uhr"></div>
-      <div class="heimat" title="Heimat: hier speicherst du, lagerst ein und startest nach einem Wrack neu. Pfeil = Richtung (Norden oben)."><span id="a-heimatpfeil" class="windpfeil">➜</span><span id="a-heimat"></span></div><div id="a-mass" class="mass"></div><div id="a-masstext"></div></div>
+    <div class="tafel rechts-unten"><canvas id="a-barometer" title="Barometer: Fällt die Nadel Richtung „Sturm“, zieht in einigen Minuten ein Schneesturm auf (schlechte Sicht, langsamer)."></canvas>
+      <div id="a-uhr" class="uhr"></div>${wegweiserHtml()}<div id="a-mass" class="mass"></div><div id="a-masstext"></div></div>
     <div id="a-status" class="status"></div>`;
   const ids = ['a-tempo', 'a-druck', 'a-befehl', 'a-licht', 'a-windpfeil', 'a-wind', 'a-boden', 'a-mass', 'a-masstext', 'a-status',
-    'a-fuell-0', 'a-fuell-1', 'a-lager-0', 'a-lager-1', 'a-trupp', 'a-crew', 'a-satt', 'a-gesund', 'a-moral', 'a-kaelte', 'a-uhr', 'a-heizung',
-    'a-heimat', 'a-heimatpfeil'];
+    'a-fuell-0', 'a-fuell-1', 'a-lager-0', 'a-lager-1', 'a-trupp', 'a-crew', 'a-satt', 'a-gesund', 'a-moral', 'a-kaelte', 'a-uhr', 'a-heizung'];
   for (const id of ids) {
     el[id] = /** @type {HTMLElement} */ (hud.querySelector('#' + id));
   }
@@ -102,6 +104,9 @@ export function anzeigeAufbauen(hud, aktionen) {
   el['a-licht'].addEventListener('click', () => { aktionen.licht(); el['a-licht'].blur(); });
   ofen = /** @type {HTMLCanvasElement} */ (hud.querySelector('#a-ofen'));
   ofenEinrichten(ofen);
+  baro = /** @type {HTMLCanvasElement} */ (hud.querySelector('#a-barometer'));
+  barometerEinrichten(baro);
+  wegweiserEinrichten(hud, aktionen);
   el['a-heizung'].addEventListener('click', () => { aktionen.heizung(); el['a-heizung'].blur(); });
   wahlknoepfe = [...hud.querySelectorAll('.wahl button')].map((b) => /** @type {HTMLElement} */ (b));
   wahlknoepfe.forEach((b, i) => b.addEventListener('click', () => { aktionen.brennstoff(i); b.blur(); }));
@@ -135,14 +140,17 @@ export function anzeigeAktualisieren(spiel, dtMs) {
     dampfmaschineZeichnen(maschine, {
       druck: k.dampf / DAMPF_JE_STUFE, druckMax: DRUCKSTUFEN.length - 1, feuer: k.druck, feuerMax: DRUCKSTUFEN.length - 1, gas: k.antrieb / EINGABE_MAX, // Dampfvorrat (M4a)
       weg: wegVon(k.id), dtMs: v.pausiert() ? 0 : dtMs,
+      brennt, stufeName: DRUCKSTUFEN[k.druck].name, kgMin: verbrauchKgMin(k, s.tick), // Feuer-Anzeige (Spieltest M5a)
     });
     laderaum(s, k);
     kesselUndKaelte(s, k);
-    heimat(k);
   }
   uhr(s.tick);
+  barometerZeichnen(baro, barometer(s.wetter, s.tick));
+  wegweiserAktualisieren(s, k);
   massstab();
-  const status = v.pausiert() ? 'PAUSE' : liegenMeldung(s, v.spieler, dtMs) || speicherMeldung() || (v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '');
+  const auftrag = auftragMeldung(s, k, v.pausiert() ? 0 : dtMs);
+  const status = v.pausiert() ? 'PAUSE' : liegenMeldung(s, v.spieler, dtMs) || auftrag || speicherMeldung() || (v.tempo() > 1 ? `Tempo ${v.tempo()}×` : '');
   el['a-status'].textContent = status;
   el['a-status'].hidden = status === '';
 }
@@ -186,7 +194,7 @@ function laderaum(s, k) {
  */
 function crew(c) {
   const krank = kranke(c.heizer, c) + kranke(c.arbeiter, c);
-  setzen('a-crew', `${c.heizer} Heizer · ${c.arbeiter} Arbeiter${krank > 0 ? ` · ${krank} krank` : ''}${c.tote > 0 ? ` · ${c.tote} †` : ''}`);
+  setzen('a-crew', `${c.heizer} Heizer · ${c.arbeiter} Arbeiter${c.passagiere > 0 ? ` · ${c.passagiere} Gerettete` : ''}${krank > 0 ? ` · ${krank} krank` : ''}${c.tote > 0 ? ` · ${c.tote} †` : ''}`);
   for (const [id, wert] of /** @type {[string, number][]} */ ([['a-satt', c.satt], ['a-gesund', c.gesundheit], ['a-moral', c.moral]])) {
     const breite = `${Math.round(wert / 10000)}%`;
     if (el[id].style.width !== breite) el[id].style.width = breite;
@@ -209,21 +217,6 @@ function liegenMeldung(s, spieler, dtMs) {
   liegen.wracks = s.wracks.length;
   liegen.restMs = Math.max(0, liegen.restMs - dtMs);
   return liegen.restMs > 0 ? 'LIEGENGEBLIEBEN — das Wrack bleibt, Neustart in der Heimat' : '';
-}
-
-/**
- * Zeile „Heimat“ unten rechts (M4d): Name, Richtungspfeil und Entfernung — zum Heimfinden.
- * @param {import('../sim/types.js').Koloss} k
- */
-function heimat(k) {
-  const sd = SIEDLUNGEN[k.heimat];
-  if (!sd) return;
-  const m = rumpfMitte(k);
-  const dx = sd.x - m.x / UM_PRO_METER, dy = sd.y - m.y / UM_PRO_METER, weit = Math.hypot(dx, dy);
-  const da = siedlungVon(k) === k.heimat;
-  el['a-heimatpfeil'].hidden = da;
-  if (!da) el['a-heimatpfeil'].style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
-  setzen('a-heimat', da ? `⌂ ${sd.name} · hier` : `⌂ ${sd.name} · ${weit >= 1000 ? `${(weit / 1000).toFixed(1).replace('.', ',')} km` : `${Math.round(weit / 10) * 10} m`}`);
 }
 
 /** @param {string} ware @param {boolean} abwurf */
